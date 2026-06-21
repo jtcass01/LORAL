@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" baseProfile="tiny" height="0.086in" version="1.2" viewBox="0 0 475 86" width="0.475in" >
+    <desc>
+        <referenceFile>axial_lay_2_400mil_pcb.svg</referenceFile>
+    </desc>
+    <desc >Fritzing footprint SVG</desc>
+    <g gorn="0.1" id="silkscreen" >
+        <line stroke="white" stroke-width="10" x1="75" x2="147"  y1="43" y2="43"/>
+        <line stroke="white" stroke-width="10" x1="347" x2="400"  y1="43" y2="43"/>
+        <line stroke="white" stroke-width="10" x1="147" x2="347"  y1="10" y2="10"/>
+        <line stroke="white" stroke-width="10" x1="347" x2="347"  y1="10" y2="76"/>
+        <line stroke="white" stroke-width="10" x1="347" x2="147"  y1="76" y2="76"/>
+        <line stroke="white" stroke-width="10" x1="147" x2="147"  y1="76" y2="10"/>
+    </g>
+    <g gorn="0.2" id="copper0" >
+        <g gorn="0.2.0" id="copper1" >
+            <!-- <rect width="55" x="10" y="15.5" fill="none" height="55" stroke="rgb(255, 191, 0)" stroke-width="20" />  -->
+            <circle cx="37.5" cy="43" fill="none" gorn="0.2.0.0" id="connector0pin" r="27.5" stroke="rgb(255, 191, 0)" stroke-width="20" />
+            <circle cx="437.5" cy="43" fill="none" gorn="0.2.0.1" id="connector1pin" r="27.5" stroke="rgb(255, 191, 0)" stroke-width="20" />
+        </g>
+    </g>
+    <g gorn="0.3" id="keepout" />
+    <g gorn="0.4" id="soldermask" />
+    <g gorn="0.5" id="outline" />
+</svg>

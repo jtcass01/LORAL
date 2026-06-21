@@ -1,0 +1,17 @@
+Optical wireless links are attractive for space and near-surface applications because they provide highly directional, low-interference communication under radio-frequency constraints. At the same time, received optical power can serve as a position observable in controlled environments. What remains less explored is a single embedded platform that uses one optical signal for both communication and localization.
+
+This paper presents LORAL, a compact experimental platform that investigates joint optical communication and localization using infrared (IR) beacons. LORAL employs three fixed IR beacons at distinct carrier frequencies, enabling frequency-domain beacon separation from a single photodiode receiver while supporting on-off keyed (OOK) packet decoding, signal-strength estimation, and embedded position estimation via the Goertzel algorithm.
+The primary contributions of this work are: (i)~a unified embedded architecture
+for joint optical communication and localization sharing a single signal acquisition
+and spectral estimation pipeline; (ii)~a characterization of bit error rate (BER)
+and packet success rate for IR OOK links across 0.1--3~m; and (iii)~a multi-beacon
+triangulation demonstration targeting position accuracy below 10~cm in a
+3~m~$\times$~3~m workspace.
+
+The remainder of this paper is organized as follows:
+Section~\ref{related_works} reviews prior work in free-space optical communication,
+optical localization, frequency-multiplexed beacon networks, and embedded spectral
+detection. Section~\ref{system_overview} describes the system architecture and
+signal model. Section~\ref{experiments} details the experimental setup.
+Section~\ref{results} presents results and evaluation, and
+Section~\ref{conclusion} concludes the paper.

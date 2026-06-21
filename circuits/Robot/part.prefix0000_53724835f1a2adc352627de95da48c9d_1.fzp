@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<module fritzingVersion="0.1.1201" moduleId="prefix0000_53724835f1a2adc352627de95da48c9d_1" referenceFile="resistor.fzp">
+ <version>4</version>
+ <title>1000 Ω Resistor</title>
+ <label>R</label>
+ <date>Tue Jun 2 2026</date>
+ <author>Brendan Howell</author>
+ <tags>
+  <tag>Resistor</tag>
+  <tag>basic resistor</tag>
+  <tag>fritzing core</tag>
+ </tags>
+ <properties>
+  <property name="family">resistor</property>
+  <property name="variant">variant 2</property>
+  <property name="mpn"></property>
+  <property name="Resistance">1000</property>
+  <property name="part number"></property>
+  <property name="bands">4</property>
+  <property name="Pin Spacing">400 mil</property>
+  <property name="mn"></property>
+  <property name="tolerance">±5%</property>
+  <property name="layer"></property>
+  <property name="package">THT</property>
+  <property name="power">0.25W</property>
+ </properties>
+ <taxonomy>discreteParts.resistor.220</taxonomy>
+ <description>A generic resistor (0.25W)</description>
+ <spice>
+  <line>R{instanceTitle} {net connector0} {net connector1} {resistance}</line>
+ </spice>
+ <views>
+  <iconView>
+   <layers image="icon/prefix0000_53724835f1a2adc352627de95da48c9d_1_icon.svg">
+    <layer layerId="icon"/>
+   </layers>
+  </iconView>
+  <breadboardView>
+   <layers image="breadboard/prefix0000_53724835f1a2adc352627de95da48c9d_1_breadboard.svg">
+    <layer layerId="breadboard"/>
+   </layers>
+  </breadboardView>
+  <schematicView>
+   <layers image="schematic/prefix0000_53724835f1a2adc352627de95da48c9d_1_schematic.svg">
+    <layer layerId="schematic"/>
+   </layers>
+  </schematicView>
+  <pcbView>
+   <layers image="pcb/prefix0000_53724835f1a2adc352627de95da48c9d_1_pcb.svg">
+    <layer layerId="copper0"/>
+    <layer layerId="copper1"/>
+    <layer layerId="keepout"/>
+    <layer layerId="soldermask"/>
+    <layer layerId="silkscreen"/>
+    <layer layerId="outline"/>
+   </layers>
+  </pcbView>
+ </views>
+ <connectors>
+  <connector id="connector0" name="Pin 0" type="male">
+   <description>Pin0</description>
+   <views>
+    <breadboardView>
+     <p layer="breadboard" legId="connector0leg" svgId="connector0pin"/>
+    </breadboardView>
+    <schematicView>
+     <p layer="schematic" svgId="connector0pin" terminalId="connector0terminal"/>
+    </schematicView>
+    <pcbView>
+     <p layer="copper0" svgId="connector0pin"/>
+     <p layer="copper1" svgId="connector0pin"/>
+    </pcbView>
+   </views>
+  </connector>
+  <connector id="connector1" name="Pin 1" type="male">
+   <description>Pin 1</description>
+   <views>
+    <breadboardView>
+     <p layer="breadboard" legId="connector1leg" svgId="connector1pin"/>
+    </breadboardView>
+    <schematicView>
+     <p layer="schematic" svgId="connector1pin" terminalId="connector1terminal"/>
+    </schematicView>
+    <pcbView>
+     <p layer="copper0" svgId="connector1pin"/>
+     <p layer="copper1" svgId="connector1pin"/>
+    </pcbView>
+   </views>
+  </connector>
+ </connectors>
+</module>

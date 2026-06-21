@@ -1,0 +1,67 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{comment}
+\usepackage{subfig}
+\usepackage{booktabs}
+\newcommand{\centered}[1]{\begin{tabular}{l} #1 \end{tabular}}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+\graphicspath{{figures/}}
+
+\title{LORAL: Lunar Optical Relay And Localization\\
+}
+
+\author{
+\IEEEauthorblockN{Jacob Taylor Cassady}
+\IEEEauthorblockA{
+\textit{Robotics and Autonomous Systems} \\
+\textit{Johns Hopkins University}\\
+Baltimore, United States \\
+jcassad1@jh.edu
+}
+\thanks{This paper was completed as part of classwork for Application of Sensing Systems at Johns Hopkins Whiting School of Engineering taught by Elishiah Miller, Ph.D. and was funded by NASA's Advanced Degree Program.}
+}
+
+\maketitle
+
+
+\begin{abstract}
+\input{sections/00_abstract.tex}
+\end{abstract}
+
+\begin{IEEEkeywords}
+Infrared communication, localization, photodiode sensing, embedded systems, lunar robotics, signal processing
+\end{IEEEkeywords}
+
+\section{Introduction}\label{introduction}
+\input{sections/01_introduction.tex}
+
+\section{Related Works}\label{related_works}
+\input{sections/02_related_work.tex}
+
+\section{System Overview}\label{system_overview}
+\input{sections/03_system_overview.tex}
+
+\section{Experiments}\label{experiments}
+\input{sections/04_experiments.tex}
+
+\section{Results and Evaluation}\label{results}
+\input{sections/05_results.tex}
+
+\section{Conclusion}\label{conclusion}
+\input{sections/06_conclusion.tex}
+
+\section*{Acknowledgment}
+\input{sections/07_acknowledgment.tex}
+
+\bibliographystyle{IEEEtran}
+\bibliography{IEEEabrv,mybibfile}
+
+\end{document}

@@ -1,0 +1,74 @@
+Optical wireless communication has attracted growing interest for space and near-surface
+applications where radio-frequency constraints make highly directional links
+advantageous~\cite{Hemmati2006}. Demonstrations such as the Lunar Laser Communication
+Demonstration (LLCD) have validated intensity-modulated direct-detection (IM/DD) optical
+links at lunar distances~\cite{Boroson2014}, while terrestrial IR and
+visible-light systems have established IM/DD as a practical framework for short-range
+wireless data links~\cite{Kahn1997}. In parallel, received optical signal strength
+has been investigated as a position observable in structured indoor
+environments~\cite{DoYoo2016}.
+
+Despite these advances, optical communication and optical localization have remained
+largely separate functionalities. High-rate optical communication systems prioritize
+data throughput and pointing accuracy, while optical localization systems treat
+received signal amplitude as a passive range indicator without exploiting the data
+content of the received waveform. 
+While optical communication and optical localization have each been widely studied, their joint implementation on a single embedded platform using a shared optical signal remains relatively unexplored.
+
+This section reviews prior work in free-space optical communication, short-range IR and visible-light links, optical localization, frequency-multiplexed beacon networks, and embedded narrowband spectral detection. These areas collectively motivate the design of LORAL as a unified communication and localization platform.
+
+\subsection{Free-Space Optical Communication Systems}
+
+Prior work on free-space and space optical links establishes the performance
+benchmarks and link design principles achieved by IM/DD systems across a wide range
+of operational distances. Hemmati~\cite{Hemmati2006} provides a systematic treatment
+of deep-space optical link architectures, deriving received power margins and pointing
+loss budgets as functions of aperture, beam divergence, and range. 
+Biswas and Piazzolla~\cite{Biswas2003} quantified these parameters for a
+Mars-to-Earth optical downlink, developing link-budget analyses based on
+received optical power and noise processes that are also fundamental to
+short-range IM/DD systems.
+At orbital distances, Sodnik~et~al.~\cite{Sodnik2010}
+demonstrated bidirectional optical communication in the European Space Agency SILEX
+program, validating acquisition, pointing, and tracking subsystems across an
+intersatellite link at high data rates. 
+Boroson~et~al.~\cite{Boroson2014} reported the Lunar Laser Communication
+Demonstration (LLCD), which achieved a 622~Mbps downlink from lunar orbit
+using a laser transmitter and photon-counting receiver, demonstrating the
+feasibility of high-rate optical communication at lunar distances.
+Collectively, these systems confirm that IM/DD optical links scale from
+laboratory distances to interplanetary ranges, with transmitter power and receiver
+aperture as the primary design variables.
+
+\subsection{Infrared and Visible-Light Communication Links}
+
+Short-range optical wireless communication using light-emitting diodes (LEDs) has been characterized over
+indoor link distances with established models for channel loss and receiver noise.
+Kahn and Barry~\cite{Kahn1997} provided the foundational analysis of indoor IR
+channels, deriving the tradeoffs among power, receiver sensitivity, ambient-light-induced shot noise,
+thermal noise, and achievable link performance. 
+Their work established the analytical models that remain widely used in optical wireless communication research.
+Ghassemlooy, Popoola, and Rajbhandari~\cite{ghassemlooy2019optical} subsequently presented a comprehensive treatment of optical wireless communication system and channel modeling, including path-loss models, multipath propagation effects, photodetector noise mechanisms, and performance analysis for indoor and outdoor optical links.
+Elgala~et~al.~\cite{Elgala2011} surveyed resulting system-level architectural
+tradeoffs, including the tension between receiver field-of-view, angular sensitivity,
+and ambient light rejection that governs photodiode front-end design for fixed-emitter
+reception.
+
+\subsection{Optical Localization and Signal-Strength Positioning}
+
+Received optical signal strength (RSS) has been applied as a position observable in
+controlled environments where emitter positions are known \textit{a priori}.
+Do and Yoo~\cite{DoYoo2016} surveyed VLC-based positioning systems and discussed localization approaches based on RSS, angle-of-arrival (AOA), and time-difference-of-arrival (TDOA). They reviewed these methods in terms of implementation complexity, infrastructure requirements, and achievable positioning accuracy. 
+Received-signal-strength-based approaches rely on optical power measurements and are widely used in controlled indoor environments due to their simplicity.
+Lim~\cite{7096289} demonstrated three-dimensional LED-based positioning using distributed emitter arrays, reporting sub-decimeter accuracy under line-of-sight conditions. 
+In contrast to LiDAR-based mapping approaches, these methods require no spatial map construction and produce position estimates directly from received signal amplitudes, making them compatible with embedded computation constraints.
+
+\subsection{Frequency-Division Multiplexed Optical Beacon Networks}
+
+Frequency-division multiplexing has been applied to optical wireless systems to enable simultaneous transmission of multiple subcarriers received by a single photodetector. 
+Grubor et al.~\cite{Grubor2008} demonstrated broadband LED-based data transmission using frequency-multiplexed (OFDM-style) modulation, showing that multiple spectrally separated channels can be recovered at a common receiver when adequate subcarrier spacing is used and nonlinear distortion is limited. 
+Their work highlights the feasibility of spectral-domain separation in optical links, at the cost of increased receiver-side signal processing complexity, particularly in per-subcarrier filtering and demodulation.
+
+\subsection{Embedded Narrowband Spectral Detection}
+
+Narrowband spectral estimation methods reduce computational cost when only a small number of frequency components are required. The Goertzel algorithm~\cite{Goertzel1958} evaluates individual Discrete Fourier Transform (DFT)  bins using a second-order recursive structure, requiring $O(N)$ operations per target frequency over a block of N samples. In contrast, the Fast Fourier Transform (FFT) computes all N frequency bins with $O(N \log N)$ complexity~\cite{Proakis2007}. When only a small number of fixed frequencies are of interest, the Goertzel algorithm can therefore be more efficient than a full FFT-based spectral estimate. This makes it well-suited to embedded implementations where only a limited set of tones must be detected and memory and compute resources are constrained.
