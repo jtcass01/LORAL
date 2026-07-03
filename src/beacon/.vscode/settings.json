@@ -6,6 +6,8 @@
     },
     "python.terminal.activateEnvironment": false,
     "micropico.openOnStart": true,
+    "micropico.autoConnect": false,
+    "micropico.manualComDevice": "COM8",
     "python.analysis.typeshedPaths": [
         "~/.micropico-stubs/included"
     ],
