@@ -13,9 +13,11 @@ import time
 
 import requests
 
-MESSAGE_LOG_RE = re.compile(r"<pre>(.*?)</pre>", re.DOTALL)
+PRE_BLOCK_RE = re.compile(r"<pre>(.*?)</pre>", re.DOTALL)
 DISTANCE_RE = re.compile(r"Estimated Distance:</b>\s*<span[^>]*>([^<]*)</span>")
 RESYNC_ERRORS_RE = re.compile(r"Resync Errors:</b>\s*<span[^>]*>([^<]*)</span>")
+MISSED_START_PULSES_RE = re.compile(r"Missed Start Pulses:</b>\s*<span[^>]*>([^<]*)</span>")
+EDGE_THRESHOLD_RE = re.compile(r"Current Edge Threshold:</b>\s*<span[^>]*>([^<]*)</span>")
 BROADCASTING_RE = re.compile(r"Currently Broadcasting:\s*<b>([^<]*)</b>")
 
 # Placeholder the robot's shared_data starts with before any message is decoded —
@@ -76,20 +78,29 @@ def compute_bit_error_stats(ground_truth: str, decoded_messages: list[str]) -> d
     }
 
 
-def fetch_robot_status(url: str) -> tuple[list[str], str, str]:
+def fetch_robot_status(url: str) -> tuple[list[str], str, str, str, list[str], str]:
     response = requests.get(url, timeout=5)
     response.raise_for_status()
     html = response.text
 
-    message_match = MESSAGE_LOG_RE.search(html)
+    # The page has two <pre> blocks in order: the message log, then the
+    # missed-start-pulse log.
+    pre_blocks = PRE_BLOCK_RE.findall(html)
     distance_match = DISTANCE_RE.search(html)
     resync_match = RESYNC_ERRORS_RE.search(html)
+    missed_start_match = MISSED_START_PULSES_RE.search(html)
+    edge_threshold_match = EDGE_THRESHOLD_RE.search(html)
 
-    log_text = message_match.group(1).strip() if message_match else ""
-    messages = [m for m in log_text.splitlines() if m and m != INIT_PLACEHOLDER]
+    message_log = pre_blocks[0].strip() if len(pre_blocks) > 0 else ""
+    missed_pulse_log_text = pre_blocks[1].strip() if len(pre_blocks) > 1 else ""
+
+    messages = [m for m in message_log.splitlines() if m and m != INIT_PLACEHOLDER]
+    missed_pulse_log = [m for m in missed_pulse_log_text.splitlines() if m]
     distance = distance_match.group(1).strip() if distance_match else "(unknown)"
     resync_errors = resync_match.group(1).strip() if resync_match else "(unknown)"
-    return messages, distance, resync_errors
+    missed_start_pulses = missed_start_match.group(1).strip() if missed_start_match else "(unknown)"
+    edge_threshold = edge_threshold_match.group(1).strip() if edge_threshold_match else "(unknown)"
+    return messages, distance, resync_errors, missed_start_pulses, missed_pulse_log, edge_threshold
 
 
 def fetch_beacon_message(url: str) -> str:
@@ -114,7 +125,9 @@ def main() -> None:
 
     while True:
         try:
-            decoded_messages, distance, resync_errors = fetch_robot_status(robot_url)
+            decoded_messages, distance, resync_errors, missed_start_pulses, missed_pulse_log, edge_threshold = (
+                fetch_robot_status(robot_url)
+            )
             ground_truth = fetch_beacon_message(beacon_url)
         except requests.RequestException as exc:
             print(f"Failed to reach robot/beacon: {exc}", file=sys.stderr)
@@ -127,8 +140,14 @@ def main() -> None:
             print(f"Bit error rate:       {stats['bit_error_rate']:.4%}")
             print(f"Packet success rate:  {stats['packet_success_rate']:.2%}")
             print(f"Resync errors:        {resync_errors}")
+            print(f"Missed start pulses:  {missed_start_pulses}")
+            print(f"Current edge threshold: {edge_threshold}")
             for m in stats["per_message"]:
                 print(f"  {m['bit_errors']:3d} bit errors  <- {m['decoded']!r}")
+            if missed_pulse_log:
+                print("Recent missed start pulses (duration/peak amplitude):")
+                for entry in missed_pulse_log:
+                    print(f"  {entry}")
 
         if args.once:
             break
