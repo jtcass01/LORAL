@@ -11,7 +11,8 @@ MAX_MESSAGES = 5 # Changed to keep the last 5 messages
 
 shared_data = {
     "messages": ["System initialized. Awaiting messages..."],
-    "estimated_distance": "Pending ML Model (TBD)"
+    "estimated_distance": "Pending ML Model (TBD)",
+    "resync_errors": 0
 }
 
 # --- Wi-Fi Setup ---
@@ -46,6 +47,7 @@ def core1_http_server():
             with data_lock:
                 message_log = "\n".join(shared_data["messages"])
                 dist = shared_data["estimated_distance"]
+                resync_errors = shared_data["resync_errors"]
             
             # Build the HTML response
             html = f"""HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\n
@@ -65,7 +67,8 @@ def core1_http_server():
                     <div class="container">
                         <h2>Robot Receiver Status</h2>
                         <p><b>Estimated Distance:</b> <span style="font-size: 1.2em; color: #d9534f;">{dist}</span></p>
-                        
+                        <p><b>Resync Errors:</b> <span style="font-size: 1.2em; color: #d9534f;">{resync_errors}</span></p>
+
                         <h3>Message Log (Last {MAX_MESSAGES})</h3>
                         <div class="log-box">
 <pre>{message_log}</pre>
@@ -150,31 +153,41 @@ class SingleDiodeRobot:
                         # Shift the bit into place (Transmitter sends LSB first)
                         current_byte |= (bit_val << bit_count)
                         bit_count += 1
-                        
+
                         # We have collected a full 8-bit character
                         if bit_count == 8:
                             char = chr(current_byte)
-                            
+
                             # End of message
                             if char == '\n':
                                 if message_buffer.strip(): # Ignore completely empty payloads
                                     print(f"Full message received: {message_buffer}")
-                                    
+
                                     # Update shared data
                                     with data_lock:
                                         shared_data["messages"].append(message_buffer)
                                         if len(shared_data["messages"]) > MAX_MESSAGES:
                                             shared_data["messages"].pop(0)
-                                
+
                                 # Clear the buffer for the next message
                                 message_buffer = ""
                             else:
                                 # Append character to buffer
                                 message_buffer += char
-                                
+
                             # Reset bit reader state machine, wait for next START PULSE
-                            reading_bits = False 
-                            
+                            reading_bits = False
+                    else:
+                        # Pulse duration didn't match a start pulse, a '1', or a '0'.
+                        # Bit_count would otherwise silently fail to advance, shifting
+                        # every remaining bit in this byte (and desyncing the rest of
+                        # the message). Discard the in-progress byte and resync on the
+                        # next start pulse instead of building on a corrupted position.
+                        print(f"Resync: ambiguous pulse ({duration_ms:.1f}ms), byte discarded")
+                        with data_lock:
+                            shared_data["resync_errors"] += 1
+                        reading_bits = False
+
         except asyncio.CancelledError:
             print("Receiver task cancelled.")
         except Exception as e:
