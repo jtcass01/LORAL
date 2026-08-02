@@ -1,6 +1,5 @@
-import uasyncio as asyncio
 from machine import Pin, ADC
-from utime import ticks_us, ticks_diff
+from utime import ticks_us, ticks_diff, sleep_us
 
 class SingleDiodeRobot:
     def __init__(self, receiver_adc: ADC, edge_threshold: int = 2000):
@@ -22,8 +21,8 @@ class SingleDiodeRobot:
         
         return raw, self._filtered_val
 
-    async def listen_for_pulse(self):
-        """Asynchronously waits for an IR pulse without blocking the Pico."""
+    def listen_for_pulse(self):
+        """Synchronously waits for an IR pulse, blocking the Pico."""
         
         # 1. Wait for RISING EDGE
         while True:
@@ -32,8 +31,8 @@ class SingleDiodeRobot:
                 start_time = ticks_us()
                 break
             
-            # Yield control to the async event loop as fast as possible
-            await asyncio.sleep(0) 
+            # Blocking sleep
+            sleep_us(100) 
             
         peak_amplitude = 0
         
@@ -48,44 +47,41 @@ class SingleDiodeRobot:
                 end_time = ticks_us()
                 break
                 
-            # Yield control to the async event loop
-            await asyncio.sleep(0)
+            # Blocking sleep
+            sleep_us(100)
 
         duration = ticks_diff(end_time, start_time)
         return duration, peak_amplitude
 
-    async def run(self):
-        """Async main loop for the receiver."""
-        print("Robot Receiver Started (Async Mode).")
+    def run(self):
+        """Main loop for the receiver."""
+        print("Robot Receiver Started (Sync/Blocking Mode).")
         
-        try:
-            while True:
-                # Await the pulse detection
-                duration_us, peak_amplitude = await self.listen_for_pulse()
-                duration_ms = duration_us / 1000.0
-                
-                if 40 < duration_ms < 60:
-                    print(f"START PULSE detected! Peak Amplitude: {peak_amplitude}")
-                elif 20 < duration_ms < 30:
-                    print("Bit: 1")
-                elif 5 < duration_ms < 15:
-                    print("Bit: 0")
-                else:
-                    pass # Ignore tiny noise spikes or malformed pulses
-        except asyncio.CancelledError:
-            print("Receiver task cancelled.")
+        while True:
+            # Block until pulse detection
+            duration_us, peak_amplitude = self.listen_for_pulse()
+            duration_ms = duration_us / 1000.0
+            
+            if 40 < duration_ms < 60:
+                print(f"START PULSE detected! Peak Amplitude: {peak_amplitude}")
+            elif 20 < duration_ms < 30:
+                print("Bit: 1")
+            elif 5 < duration_ms < 15:
+                print("Bit: 0")
+            else:
+                pass # Ignore tiny noise spikes or malformed pulses
 
-async def main():
+
+def main():
     # Setup hardware
     receiver_adc = ADC(0) 
     test_robot = SingleDiodeRobot(receiver_adc=receiver_adc, edge_threshold=2000)
     
-    # Run the receiver
-    await test_robot.run()
+    # Run the receiver loop
+    test_robot.run()
 
 if __name__ == "__main__":
     try:
-        # Start the async event loop
-        asyncio.run(main())
+        main()
     except KeyboardInterrupt:
         print("\nProgram interrupted by user.")
