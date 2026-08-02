@@ -191,9 +191,6 @@ class SingleDiodeRobot:
                 duration_us, peak_amplitude = await self.listen_for_pulse()
                 duration_ms = duration_us / 1000.0
 
-                with data_lock:
-                    shared_data["edge_threshold"] = round(self._edge_threshold)
-
                 # Check for Start Pulse (40-60ms)
                 if 40 < duration_ms < 60:
                     reading_bits = True
@@ -227,6 +224,7 @@ class SingleDiodeRobot:
                                         shared_data["messages"].append(message_buffer)
                                         if len(shared_data["messages"]) > MAX_MESSAGES:
                                             shared_data["messages"].pop(0)
+                                        shared_data["edge_threshold"] = round(self._edge_threshold)
 
                                 # Clear the buffer for the next message
                                 message_buffer = ""
@@ -245,6 +243,7 @@ class SingleDiodeRobot:
                         print(f"Resync: ambiguous pulse ({duration_ms:.1f}ms), byte discarded")
                         with data_lock:
                             shared_data["resync_errors"] += 1
+                            shared_data["edge_threshold"] = round(self._edge_threshold)
                         reading_bits = False
 
                 else:
@@ -263,6 +262,7 @@ class SingleDiodeRobot:
                         )
                         if len(shared_data["missed_pulse_log"]) > MAX_MISSED_PULSE_LOG:
                             shared_data["missed_pulse_log"].pop(0)
+                        shared_data["edge_threshold"] = round(self._edge_threshold)
 
         except asyncio.CancelledError:
             print("Receiver task cancelled.")
