@@ -71,6 +71,7 @@ def compute_bit_error_stats(ground_truth: str, decoded_messages: list[str]) -> d
     return {
         "per_message": per_message,
         "message_count": message_count,
+        "exact_matches": exact_matches,
         "total_bit_errors": total_bit_errors,
         "total_bits_sent": total_bits_sent,
         "bit_error_rate": (total_bit_errors / total_bits_sent) if total_bits_sent else 0.0,
