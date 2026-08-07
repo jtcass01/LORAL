@@ -3,11 +3,12 @@ import socket
 import _thread
 from machine import Pin
 from utime import sleep_us, sleep_ms, sleep
+from wifi_config import WIFI_SSID, WIFI_PASSWORD
 
 # --- Shared State for Inter-Core Communication ---
 msg_lock = _thread.allocate_lock()
 shared_data = {
-    "message": "A" # Default starting message
+    "message": "The Quick Brown Fox 12345" # Default starting message
 }
 
 # --- Wi-Fi Setup ---
@@ -182,7 +183,7 @@ class Beacon:
 
 if __name__ == "__main__":
     # 1. Connect to Network
-    connect_wifi("", "")
+    connect_wifi(WIFI_SSID, WIFI_PASSWORD)
     
     # Setup hardware
     led_gpio: Pin = Pin(16, Pin.OUT)

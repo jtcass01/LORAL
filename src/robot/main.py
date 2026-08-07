@@ -4,6 +4,7 @@ import socket
 import _thread
 from machine import ADC
 from utime import ticks_us, ticks_diff, sleep
+from wifi_config import WIFI_SSID, WIFI_PASSWORD
 
 # --- Shared State for Inter-Core Communication ---
 data_lock = _thread.allocate_lock()
@@ -187,7 +188,7 @@ async def main():
 
 if __name__ == "__main__":
     # 1. Connect to Network (Fill in your credentials)
-    connect_wifi("", "")
+    connect_wifi(WIFI_SSID, WIFI_PASSWORD)
     
     # 2. Start HTTP server on Core 1
     _thread.start_new_thread(core1_http_server, ())
