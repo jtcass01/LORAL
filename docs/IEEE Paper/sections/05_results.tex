@@ -1,0 +1,197 @@
+\subsection{Amplitude Carries No Usable Information}
+
+The choice to encode symbols in the time domain is validated directly by the
+measurements. Received peak amplitude is pinned: across the 90{,}870 pulses of
+the sweep it sits at 41{,}370 of 65{,}535 converter counts with a standard
+deviation of 71 counts, a coefficient of variation of 0.17\%, and the 67{,}581
+pulses of the single-rate dataset give 42{,}171 counts at the same 0.16\%
+spread. On a 3.3~V rail that peak corresponds to roughly 2.1~V, which is where
+an MCP6002 output saturates, so the invariance is the amplifier railing rather
+than a genuinely constant optical input.
+
+The clearest evidence that the peak is uninformative is that it does not move
+even when the signal demonstrably does. Between 28.6 and 171.4~bit/s the peak
+high-pass response falls by 41\%, from 1{,}742 to 1{,}033 counts, while over
+the same span the mean peak amplitude changes by 64 counts, or 0.16\%. A
+quantity that holds to two parts in a thousand while the transition amplitude
+driving it changes by nearly half is carrying no information about the channel.
+An amplitude-discriminating scheme could not have functioned on this front end,
+and no signal-strength observable, for ranging or for anything else, is
+available from it without reducing the transimpedance gain.
+
+Pulse-width classes, by contrast, remain well separated.
+Fig.~\ref{fig:separability} shows the separation between the zero and one
+symbols in pooled standard deviations as a function of data rate. Separation
+falls from 39.5 at 28.6~bit/s to 12.5 at 171.4~bit/s, but even at the highest
+rate the classes are six times further apart than the two standard deviations
+at which distributions begin to overlap appreciably.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_separability.pdf}
+\caption{Separation between the ZERO and ONE symbol classes as a function of
+data rate. Classes remain well separated at every rate tested, including rates
+at which decoding fails frequently.}
+\label{fig:separability}
+\end{figure}
+
+\subsection{The Failure Mode Is Omission, Not Confusion}
+
+This separation has a direct consequence: symbol \emph{misclassification} is not
+what limits the link. Over 67{,}581 symbols at 28.6~bit/s, no substitution
+errors occurred. The entire error budget consisted of 93 pulses (0.14\%) whose
+durations fell between the threshold decoder's acceptance windows, and
+assigning each to its nearest class recovered all 93.
+
+What limits the link is symbols the receiver never detects at all. At
+114.3~bit/s, 0.371\% of symbols went undetected, and 52.5\% of transmissions
+were missing at least one. Because a byte spans nine pulses, even this
+sub-percent per-symbol rate compounds: it corrupts 3.3\% of bytes, and over the
+234 symbols of a 25-character message it leaves only 41.9\% of transmissions
+intact. The compounding, not the per-symbol rate, is what makes the link
+unreliable, and it is the reason a metric averaged over symbols understates the
+problem by more than an order of magnitude.
+
+Crucially, every undetected symbol left a recoverable signature. Of the
+transmissions missing exactly one symbol, 100\% exhibited either an anomalous
+inter-pulse gap or a merged pulse consistent with a missed falling edge. This
+held at every rate tested, not only at 114.3~bit/s. The information required to
+reconstruct the lost symbol is present in the captured stream; a per-symbol
+classifier simply has no mechanism to use it.
+
+\subsection{Decoder Performance Across Data Rates}
+
+Table~\ref{tab:offline} and Fig.~\ref{fig:results} report the offline
+evaluation on held-out messages. The sequence decoder outperforms the threshold
+decoder at every rate, by margins ranging from 28 to 61 percentage points of
+transmission success. It reduces character error rate at every rate as well, but by an
+amount that varies considerably: by half or better at 28.6, 57.1 and
+114.3~bit/s, and by 48\% and 33\% at 85.7 and 171.4~bit/s respectively.
+
+\begin{table}[t]
+\caption{Offline evaluation, held out by message. Approximately 36 test
+transmissions per rate.}
+\label{tab:offline}
+\centering
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+& \multicolumn{2}{c}{Transmission success} & \multicolumn{2}{c}{Character error} \\
+\cmidrule(lr){2-3}\cmidrule(l){4-5}
+Rate (bit/s) & Threshold & Sequence & Threshold & Sequence \\
+\midrule
+28.6  & 72.2\% & \textbf{100.0\%} & 1.44\% & \textbf{0.00\%} \\
+57.1  & 11.1\% & \textbf{72.2\%}  & 6.32\% & \textbf{1.58\%} \\
+85.7  & 16.7\% & \textbf{52.8\%}  & 5.75\% & \textbf{3.02\%} \\
+114.3 & 36.1\% & \textbf{69.4\%}  & 3.88\% & \textbf{1.72\%} \\
+171.4 & 31.4\% & \textbf{60.0\%}  & 4.03\% & \textbf{2.69\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_results.pdf}
+\caption{Offline evaluation across data rates. (a)~Transmission success rate, with
+95\% Wilson score intervals; the dashed line is the fraction of held-out
+transmissions that arrived complete or lost a single symbol that left a
+recoverable signature, a conservative reference level for a decoder operating
+on the detected pulse stream. (b)~Character error rate. The sequence decoder made no
+errors at all at 28.6~bit/s.}
+\label{fig:results}
+\end{figure*}
+
+At 28.6~bit/s the decoder reaches 100\% transmission success with zero character errors,
+matching the computed ceiling exactly: every error at that rate is a
+dead-zone boundary error, and all are eliminated.
+
+Above that rate the decoder recovers between 42\% and 57\% of the headroom
+between the transmissions that arrived fully captured and the ceiling. At
+57.1~bit/s, half the held-out transmissions arrived complete and the decoder
+raises transmission success to 72.2\% against a ceiling of 88.9\%; at 114.3~bit/s it
+reaches 69.4\% from 47.2\% complete, against a ceiling of 94.4\%. These
+ceilings are computed on the held-out transmissions alone, so that all three
+quantities describe the same messages; evaluated over the full sweep instead,
+the same bounds read 93.3\% and 95.8\%, and the mismatch would flatter the
+decoder by up to nine points at 85.7~bit/s. The residual gap is genuine and is
+discussed in Section~\ref{conclusion}.
+
+The dashed line in Fig.~\ref{fig:results}(a) is not monotonic in rate, and
+since that invites a search for a mechanism, it is worth stating exactly what
+sets it. Because every single-omission transmission carried a recoverable
+signature, the reference level reduces to an identity: it is one minus the
+fraction of transmissions that lost \emph{two or more} symbols, and nothing
+else enters it. Across the five rates those transmissions number 0, 4, 6, 2 and
+5 out of roughly 36.
+
+Their ordering follows per-symbol loss exactly. Measured on the held-out
+transmissions alone, loss runs 0.000\%, 0.367\%, 0.495\%, 0.335\% and 0.448\%
+(the 0.371\% quoted earlier is the figure over the full sweep at
+114.3~bit/s), and ranking the rates by loss reproduces the ceiling ordering
+inverted without exception: 114.3~bit/s loses fewer symbols than 85.7~bit/s, so
+its ceiling sits higher. Payload length cannot contribute, because the same
+twelve messages are held out at every rate. The ceiling is therefore a monotone
+function of per-symbol loss, and its non-monotonicity in \emph{rate} is
+inherited from symbol loss being itself non-monotonic in rate.
+
+The differences are nonetheless small counts. The step from 6 such
+transmissions at 85.7~bit/s to 2 at 114.3~bit/s carries Wilson intervals of
+7.9--31.9\% and 1.5--18.1\%, which overlap heavily. The ceiling is best read as
+a level of roughly 85--95\% above the lowest rate rather than as a curve whose
+shape is resolved.
+
+The confidence intervals in Fig.~\ref{fig:results}(a) bear emphasis. With
+approximately 36 transmissions per rate, a point estimate near 70\% carries an
+interval of roughly $\pm$15 percentage points. The two decoders are separated
+by non-overlapping intervals at 28.6, 57.1, 85.7 and 114.3~bit/s. At
+171.4~bit/s they overlap, 18.6--48.0\% against 43.6--74.4\%, so the
+28.6-point difference at that rate alone is suggestive rather than established.
+The finer structure of the per-rate curves is not resolved at this sample size
+and should not be read as a trend.
+
+\subsection{Live Closed-Loop Operation}
+
+Fig.~\ref{fig:live} reports live operation with the decoder in the loop. At
+28.6~bit/s over 39 transmissions the sequence decoder achieved 100\%
+transmission success with zero character errors, against 69.2\% and 1.54\% for
+the threshold
+decoder. At 114.3~bit/s over 118 transmissions it achieved 44.9\% against 5.9\%
+(a factor of 7.6) and halved character error rate from 5.29\% to 2.61\%,
+recovering 46 of the 111 transmissions the threshold decoder lost. No pulses
+were reported dropped by the receiver in either run.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_live.pdf}
+\caption{Live closed-loop transmission success at two data rates, with 95\% Wilson
+score intervals. The decoder ran on a host computer with the receiver streaming
+observations and receiving decoded messages over the same serial link.}
+\label{fig:live}
+\end{figure}
+
+The live figures at 114.3~bit/s are lower than the corresponding offline
+figures, and the cause is payload length rather than any difference in the link
+or the decoder. The held-out messages that produced the offline result average
+174 symbols; the live beacon transmitted a fixed 234-symbol message. At the
+measured per-symbol loss of 0.371\%, the probability that a transmission
+arrives with no symbol missing falls from 52.4\% to 41.9\% between those
+lengths. Restricting the offline data to messages of 200 symbols or more gives
+19.4\% of transmissions fully captured, so the live decoder's 44.9\% is well
+above the fraction that arrived intact. This is the payload-length dependence
+noted in Section~\ref{system_overview} appearing as a first-order effect, and
+it is the reason payload length must be held fixed or reported when comparing
+experiments.
+
+\subsection{Residual Error Characteristics}
+
+The decoder's remaining failures at 114.3~bit/s are almost exclusively
+single-character substitutions: \texttt{Brovn} for \texttt{Brown},
+\texttt{Qudck} for \texttt{Quick}, \texttt{Quick\$Brown} for
+\texttt{Quick~Brown}. When a symbol is undetected, gap timing localizes it and
+the printable-ASCII constraint narrows the candidates, but does not always
+determine the answer uniquely: \texttt{Brovn} is valid ASCII, so the structural
+constraint cannot reject it.
+
+This error profile is informative. It indicates that the remaining headroom lies
+not in better timing evidence but in additional constraints on the payload
+itself, which motivates the language prior identified as the highest-value
+future extension.

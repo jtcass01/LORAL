@@ -1,3 +1,5 @@
 requests
 matplotlib
 pyserial
+numpy
+scikit-learn

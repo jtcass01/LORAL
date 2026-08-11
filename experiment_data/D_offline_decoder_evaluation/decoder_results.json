@@ -1,0 +1,67 @@
+{
+  "1.0": {
+    "bits": 28.57142857142857,
+    "n": 36,
+    "baseline_pass": 0.7222222222222222,
+    "decoder_pass": 1.0,
+    "baseline_exact": 26,
+    "decoder_exact": 36,
+    "baseline_byte_err": 0.014367816091954023,
+    "decoder_byte_err": 0.0,
+    "baseline_byte_errs": 10,
+    "decoder_byte_errs": 0,
+    "bytes": 696
+  },
+  "2.0": {
+    "bits": 57.14285714285714,
+    "n": 36,
+    "baseline_pass": 0.1111111111111111,
+    "decoder_pass": 0.7222222222222222,
+    "baseline_exact": 4,
+    "decoder_exact": 26,
+    "baseline_byte_err": 0.06321839080459771,
+    "decoder_byte_err": 0.015804597701149427,
+    "baseline_byte_errs": 44,
+    "decoder_byte_errs": 11,
+    "bytes": 696
+  },
+  "3.0": {
+    "bits": 85.71428571428572,
+    "n": 36,
+    "baseline_pass": 0.16666666666666666,
+    "decoder_pass": 0.5277777777777778,
+    "baseline_exact": 6,
+    "decoder_exact": 19,
+    "baseline_byte_err": 0.05747126436781609,
+    "decoder_byte_err": 0.03017241379310345,
+    "baseline_byte_errs": 40,
+    "decoder_byte_errs": 21,
+    "bytes": 696
+  },
+  "4.0": {
+    "bits": 114.28571428571428,
+    "n": 36,
+    "baseline_pass": 0.3611111111111111,
+    "decoder_pass": 0.6944444444444444,
+    "baseline_exact": 13,
+    "decoder_exact": 25,
+    "baseline_byte_err": 0.03879310344827586,
+    "decoder_byte_err": 0.017241379310344827,
+    "baseline_byte_errs": 27,
+    "decoder_byte_errs": 12,
+    "bytes": 696
+  },
+  "6.0": {
+    "bits": 171.42857142857144,
+    "n": 35,
+    "baseline_pass": 0.3142857142857143,
+    "decoder_pass": 0.6,
+    "baseline_exact": 11,
+    "decoder_exact": 21,
+    "baseline_byte_err": 0.04029850746268657,
+    "decoder_byte_err": 0.026865671641791045,
+    "baseline_byte_errs": 27,
+    "decoder_byte_errs": 18,
+    "bytes": 670
+  }
+}

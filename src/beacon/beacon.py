@@ -8,8 +8,38 @@ from wifi_config import WIFI_SSID, WIFI_PASSWORD
 # --- Shared State for Inter-Core Communication ---
 msg_lock = _thread.allocate_lock()
 shared_data = {
-    "message": "The Quick Brown Fox 12345" # Default starting message
+    "message": "The Quick Brown Fox 12345", # Default starting message
+    "rate": 1.0,                            # Speed multiplier; see Beacon.set_rate
 }
+
+# Symbol timings at rate 1.0. Every transmitted width is derived from these by
+# division, so the rate is always applied to the ORIGINAL values and repeated
+# changes cannot compound into drift.
+BASE_START_US = 50_000
+BASE_ONE_US = 25_000
+BASE_ZERO_US = 10_000
+BASE_GAP_US = 10_000
+
+# Above ~8x the shortest symbol falls to ~1.2ms, which is too few samples for
+# the receiver's MicroPython detection loop to time reliably. Below 0.5x there
+# is nothing to learn. Clamped rather than rejected so a bad query cannot stop
+# the beacon transmitting.
+MIN_RATE = 0.5
+MAX_RATE = 8.0
+
+
+def parse_query(query: str) -> dict:
+    """Parse `a=1&b=2` into a dict.
+
+    Replaces the previous logic, which only looked at the FIRST parameter and
+    only if it was `msg=` - so `?rate=2&msg=hi` silently did nothing at all.
+    """
+    out = {}
+    for pair in query.split('&'):
+        if '=' in pair:
+            k, _, v = pair.partition('=')
+            out[k] = v
+    return out
 
 # --- Wi-Fi Setup ---
 def connect_wifi(ssid, password):
@@ -58,23 +88,35 @@ def core1_http_server():
                 request_line = request.split('\r\n')[0]
                 method, path, version = request_line.split(' ')
                 
-                # Check if a form was submitted (e.g., /?msg=Hello+World)
+                # Check if a form was submitted (e.g., /?msg=Hello+World&rate=2)
                 if '?' in path:
-                    query = path.split('?')[1]
-                    if query.startswith('msg='):
-                        raw_msg = query.split('&')[0][4:] # Extract value after 'msg='
-                        new_msg = url_decode(raw_msg)
-                        
-                        # Update the shared message safely
+                    params = parse_query(path.split('?')[1])
+
+                    if 'msg' in params:
+                        new_msg = url_decode(params['msg'])
                         with msg_lock:
                             shared_data["message"] = new_msg
-                            print(f"\n[HTTP Server] Message updated to: {new_msg}")
+                        print(f"\n[HTTP Server] Message updated to: {new_msg}")
+
+                    if 'rate' in params:
+                        try:
+                            r = float(url_decode(params['rate']))
+                            r = max(MIN_RATE, min(MAX_RATE, r))
+                            with msg_lock:
+                                shared_data["rate"] = r
+                            print(f"[HTTP Server] Rate updated to: {r}x")
+                        except ValueError:
+                            pass  # ignore a malformed rate rather than stop transmitting
             except Exception as parse_err:
                 pass # Ignore malformed requests
 
-            # Safely read current message for the HTML
+            # Safely read current state for the HTML
             with msg_lock:
                 current_msg = shared_data["message"]
+                current_rate = shared_data["rate"]
+            bits_per_s = 8.0 / ((BASE_START_US + BASE_GAP_US
+                                 + 8 * ((BASE_ONE_US + BASE_ZERO_US) / 2 + BASE_GAP_US))
+                                / current_rate / 1e6)
             
             # Build HTML response with a form
             html = f"""HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\n
@@ -93,10 +135,15 @@ def core1_http_server():
                     <div class="container">
                         <h2>IR Beacon Controller</h2>
                         <p>Currently Broadcasting: <b>{current_msg}</b></p>
-                        
+                        <p>Rate: <b>{current_rate}</b>x  (~{bits_per_s:.1f} bits/s)</p>
+
                         <form action="/" method="GET">
                             <input type="text" name="msg" placeholder="Enter new message..." required maxlength="32">
                             <input type="submit" value="Update">
+                        </form>
+                        <form action="/" method="GET">
+                            <input type="text" name="rate" placeholder="Rate, e.g. 2" required>
+                            <input type="submit" value="Set Rate">
                         </form>
                         <p style="font-size: 0.8em; color: gray;">Note: A newline character (\\n) is automatically appended during transmission.</p>
                     </div>
@@ -119,12 +166,27 @@ class Beacon:
         self._yellow_gpio: Pin = yellow_gpio
         self._red_gpio: Pin = red_gpio
         
-        self._pulse_0_us = 10_000   
-        self._pulse_1_us = 25_000   
-        self._pulse_gap_us = 10_000 
-        
-        self._led_gpio.off() 
+        self._rate = 1.0
+        self.set_rate(1.0)
+
+        self._led_gpio.off()
         self.set_stoplight(red=True, yellow=False, green=False)
+
+    def set_rate(self, rate: float) -> None:
+        """Scale every symbol width by 1/rate. rate=2 transmits twice as fast.
+
+        Always derived from the BASE_* constants rather than the current
+        widths, so setting the rate repeatedly cannot accumulate rounding
+        error. The start pulse scales along with the data bits - it used to be
+        a hardcoded 50_000 inside send_byte, which would have left the framing
+        marker at its original width while the bits shrank around it.
+        """
+        rate = max(MIN_RATE, min(MAX_RATE, float(rate)))
+        self._rate = rate
+        self._pulse_start_us = int(BASE_START_US / rate)
+        self._pulse_1_us = int(BASE_ONE_US / rate)
+        self._pulse_0_us = int(BASE_ZERO_US / rate)
+        self._pulse_gap_us = int(BASE_GAP_US / rate)
 
     def set_stoplight(self, red: bool, yellow: bool, green: bool) -> None:
         self._red_gpio.value(red)
@@ -152,7 +214,7 @@ class Beacon:
     def send_byte(self, c: str) -> None:
         byte_val = ord(c)
         self._set_emitting(True)
-        sleep_us(50_000) 
+        sleep_us(self._pulse_start_us)
         self._set_emitting(False)
         sleep_us(self._pulse_gap_us)
 
@@ -165,10 +227,19 @@ class Beacon:
         self.set_stoplight(red=False, yellow=True, green=False)
         
         while True:
-            # Safely fetch the latest message on every pass and automatically append \n
+            # Fetch message AND rate once per pass. Applying either mid-pass
+            # would split a single transmission across two configurations, so a
+            # receiver would see one pass carrying two different labels.
             with msg_lock:
                 current_msg = shared_data["message"] + "\n"
-            
+                rate = shared_data["rate"]
+
+            if rate != self._rate:
+                self.set_rate(rate)
+                print(f"Rate now {self._rate}x "
+                      f"(start {self._pulse_start_us}us, one {self._pulse_1_us}us, "
+                      f"zero {self._pulse_0_us}us, gap {self._pulse_gap_us}us)")
+
             for c in current_msg:
                 self.send_byte(c)
             

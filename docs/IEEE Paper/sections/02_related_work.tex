@@ -1,74 +1,175 @@
-Optical wireless communication has attracted growing interest for space and near-surface
-applications where radio-frequency constraints make highly directional links
-advantageous~\cite{Hemmati2006}. Demonstrations such as the Lunar Laser Communication
-Demonstration (LLCD) have validated intensity-modulated direct-detection (IM/DD) optical
-links at lunar distances~\cite{Boroson2014}, while terrestrial IR and
-visible-light systems have established IM/DD as a practical framework for short-range
-wireless data links~\cite{Kahn1997}. In parallel, received optical signal strength
-has been investigated as a position observable in structured indoor
-environments~\cite{DoYoo2016}.
+Space optical communication research has concentrated overwhelmingly on
+\emph{trunk} links: high-rate, long-range channels between spacecraft, or
+between a spacecraft and a ground station. This section reviews that literature
+and then the areas relevant to the opposite regime of short-range proximity
+links between co-located surface assets: short-range infrared signalling,
+multi-detector receiver front ends, maximum-likelihood sequence detection, and
+coding for channels that drop symbols. The last two supply the method adopted
+here; the first three establish the link model and the gap this work addresses.
+A closing subsection covers optical localization, the platform's original
+objective, which is motivated but not evaluated in this paper.
 
-Despite these advances, optical communication and optical localization have remained
-largely separate functionalities. High-rate optical communication systems prioritize
-data throughput and pointing accuracy, while optical localization systems treat
-received signal amplitude as a passive range indicator without exploiting the data
-content of the received waveform. 
-While optical communication and optical localization have each been widely studied, their joint implementation on a single embedded platform using a shared optical signal remains relatively unexplored.
+\subsection{Space Optical Communication}
 
-This section reviews prior work in free-space optical communication, short-range IR and visible-light links, optical localization, frequency-multiplexed beacon networks, and embedded narrowband spectral detection. These areas collectively motivate the design of LORAL as a unified communication and localization platform.
-
-\subsection{Free-Space Optical Communication Systems}
-
-Prior work on free-space and space optical links establishes the performance
-benchmarks and link design principles achieved by IM/DD systems across a wide range
-of operational distances. Hemmati~\cite{Hemmati2006} provides a systematic treatment
-of deep-space optical link architectures, deriving received power margins and pointing
-loss budgets as functions of aperture, beam divergence, and range. 
-Biswas and Piazzolla~\cite{Biswas2003} quantified these parameters for a
-Mars-to-Earth optical downlink, developing link-budget analyses based on
-received optical power and noise processes that are also fundamental to
-short-range IM/DD systems.
-At orbital distances, Sodnik~et~al.~\cite{Sodnik2010}
-demonstrated bidirectional optical communication in the European Space Agency SILEX
-program, validating acquisition, pointing, and tracking subsystems across an
-intersatellite link at high data rates. 
+Prior work on free-space optical links establishes the performance benchmarks
+and design principles achieved by intensity-modulation direct-detection (IM/DD)
+systems across a wide range of distances. Hemmati~\cite{Hemmati2006} provides a
+systematic treatment of deep-space optical link architectures, deriving received
+power margins and pointing loss budgets as functions of aperture, beam
+divergence, and range. Biswas and Piazzolla~\cite{Biswas2003} quantified these
+parameters for a Mars-to-Earth downlink, developing link-budget analyses based
+on received optical power and noise processes. At orbital distances,
+Sodnik~et~al.~\cite{Sodnik2010} demonstrated bidirectional optical
+communication in the European Space Agency SILEX program, validating
+acquisition, pointing, and tracking across an intersatellite link.
 Boroson~et~al.~\cite{Boroson2014} reported the Lunar Laser Communication
-Demonstration (LLCD), which achieved a 622~Mbps downlink from lunar orbit
-using a laser transmitter and photon-counting receiver, demonstrating the
-feasibility of high-rate optical communication at lunar distances.
-Collectively, these systems confirm that IM/DD optical links scale from
-laboratory distances to interplanetary ranges, with transmitter power and receiver
-aperture as the primary design variables.
+Demonstration, achieving a 622~Mbps downlink from lunar orbit using a laser
+transmitter and photon-counting receiver.
 
-\subsection{Infrared and Visible-Light Communication Links}
+These systems share a common design posture. Range is large, the link budget is
+the binding constraint, and the receiver is a substantial instrument in its own
+right: cryogenically cooled detectors, precision gimbals, dedicated signal
+processing hardware. Performance is won through aperture, transmit power, and
+pointing accuracy.
 
-Short-range optical wireless communication using light-emitting diodes (LEDs) has been characterized over
-indoor link distances with established models for channel loss and receiver noise.
-Kahn and Barry~\cite{Kahn1997} provided the foundational analysis of indoor IR
-channels, deriving the tradeoffs among power, receiver sensitivity, ambient-light-induced shot noise,
-thermal noise, and achievable link performance. 
-Their work established the analytical models that remain widely used in optical wireless communication research.
-Ghassemlooy, Popoola, and Rajbhandari~\cite{ghassemlooy2019optical} subsequently presented a comprehensive treatment of optical wireless communication system and channel modeling, including path-loss models, multipath propagation effects, photodetector noise mechanisms, and performance analysis for indoor and outdoor optical links.
-Elgala~et~al.~\cite{Elgala2011} surveyed resulting system-level architectural
-tradeoffs, including the tension between receiver field-of-view, angular sensitivity,
-and ambient light rejection that governs photodiode front-end design for fixed-emitter
-reception.
+Proximity links on a planetary surface invert every one of those assumptions.
+Range is metres, so link budget is comfortable. The receiver is a photodiode
+and a shared microcontroller on a mass- and power-constrained mobile asset.
+What limits the link is not how much optical power arrives but how much of the
+arriving signal a cheap receiver can successfully decode. The present work
+addresses that regime, which the trunk-link literature does not speak to.
 
-\subsection{Optical Localization and Signal-Strength Positioning}
+\subsection{Short-Range Infrared Links}
 
-Received optical signal strength (RSS) has been applied as a position observable in
-controlled environments where emitter positions are known \textit{a priori}.
-Do and Yoo~\cite{DoYoo2016} surveyed VLC-based positioning systems and discussed localization approaches based on RSS, angle-of-arrival (AOA), and time-difference-of-arrival (TDOA). They reviewed these methods in terms of implementation complexity, infrastructure requirements, and achievable positioning accuracy. 
-Received-signal-strength-based approaches rely on optical power measurements and are widely used in controlled indoor environments due to their simplicity.
-Lim~\cite{7096289} demonstrated three-dimensional LED-based positioning using distributed emitter arrays, reporting sub-decimeter accuracy under line-of-sight conditions. 
-In contrast to LiDAR-based mapping approaches, these methods require no spatial map construction and produce position estimates directly from received signal amplitudes, making them compatible with embedded computation constraints.
+Short-range optical wireless communication using light-emitting diodes has been
+characterized extensively for terrestrial indoor use, and that literature
+supplies the channel and receiver models applicable to surface proximity links.
+Gfeller and Bapst~\cite{Gfeller1979} established diffuse infrared as a
+practical in-building medium. Kahn and Barry~\cite{Kahn1997} provided the
+foundational analysis of indoor infrared channels, deriving the tradeoffs among
+transmit power, receiver sensitivity, ambient-light shot noise, thermal noise,
+and achievable performance. Their treatment of IM/DD signalling, including
+pulse-position and pulse-width formats in which information is carried in the
+time domain rather than in amplitude, directly motivates the modulation used
+here. Ghassemlooy~et~al.~\cite{Ghassemlooy2012} present a comprehensive
+treatment of channel modelling, path loss, multipath effects, and photodetector
+noise. Elgala~et~al.~\cite{Elgala2011} survey the resulting system-level
+tradeoffs, including the tension among receiver field-of-view, angular
+sensitivity, and ambient-light rejection that governs photodiode front-end
+design.
 
-\subsection{Frequency-Division Multiplexed Optical Beacon Networks}
+Ambient-light rejection dominates much of this terrestrial work, and it is
+precisely the constraint that relaxes in a permanently shadowed lunar region,
+where solar infrared background is largely absent. What does \emph{not} relax
+is the receiver's own limitation. Time-domain symbol encoding is the relevant
+inheritance: where an analog front end operates outside its linear region (as
+is measured to be the case for the platform described here), amplitude carries
+no usable information while symbol timing remains intact. The same argument
+applies to a surface deployment for different reasons, since regolith dust
+accumulation and thermal cycling degrade optical throughput and detector
+responsivity over a mission without disturbing symbol timing.
 
-Frequency-division multiplexing has been applied to optical wireless systems to enable simultaneous transmission of multiple subcarriers received by a single photodetector. 
-Grubor et al.~\cite{Grubor2008} demonstrated broadband LED-based data transmission using frequency-multiplexed (OFDM-style) modulation, showing that multiple spectrally separated channels can be recovered at a common receiver when adequate subcarrier spacing is used and nonlinear distortion is limited. 
-Their work highlights the feasibility of spectral-domain separation in optical links, at the cost of increased receiver-side signal processing complexity, particularly in per-subcarrier filtering and demodulation.
+\subsection{Multi-Detector Receivers}
 
-\subsection{Embedded Narrowband Spectral Detection}
+Receivers employing more than one photodetector have been studied primarily for
+multipath and ambient-light rejection. Carruthers and Kahn~\cite{Carruthers2000}
+analyse angle-diversity receivers in which multiple detectors with distinct
+orientations are combined, showing improved performance in non-directed links
+where a single wide field-of-view detector suffers co-channel interference and
+multipath dispersion. The receiver described here uses two photodiodes for a
+different purpose: detection robustness at the pulse level, with edge detection
+driven by the summed response so that a symbol arriving predominantly on one
+detector is not lost. On a mobile surface asset, where relative pointing between
+rover and lander changes continuously and cannot be assumed stable, this
+tolerance to partial illumination is a practical requirement rather than an
+optimisation. The normalized difference between channels, which cancels terms
+common to both, is noted as a bearing observable but is not evaluated here.
 
-Narrowband spectral estimation methods reduce computational cost when only a small number of frequency components are required. The Goertzel algorithm~\cite{Goertzel1958} evaluates individual Discrete Fourier Transform (DFT)  bins using a second-order recursive structure, requiring $O(N)$ operations per target frequency over a block of N samples. In contrast, the Fast Fourier Transform (FFT) computes all N frequency bins with $O(N \log N)$ complexity~\cite{Proakis2007}. When only a small number of fixed frequencies are of interest, the Goertzel algorithm can therefore be more efficient than a full FFT-based spectral estimate. This makes it well-suited to embedded implementations where only a limited set of tones must be detected and memory and compute resources are constrained.
+\subsection{Maximum-Likelihood Sequence Detection}
+
+Recovering a transmitted sequence by searching for the most likely path through
+a trellis, rather than deciding each symbol independently, was formalized by
+Forney~\cite{Forney1972} for channels with intersymbol interference. The
+underlying dynamic program is due to Viterbi~\cite{Viterbi1967}, introduced for
+decoding convolutional codes and later given a general treatment by
+Forney~\cite{Forney1973}. The same recursion decodes hidden Markov models,
+whose canonical exposition is Rabiner's~\cite{Rabiner1989}: the observations are
+noisy and the underlying state sequence is unobserved.
+
+A standard hidden Markov model pairs each state transition with exactly one
+observation, and it is that correspondence which the link measured here
+violates. Two established families relax it. Explicit-duration, or hidden
+semi-Markov, models allow a state to persist for a sampled duration rather than
+a single step~\cite{Rabiner1989}. Profile hidden Markov models, developed for
+biological sequence alignment, introduce explicit \emph{delete} states that
+advance the chain while consuming no observation at all~\cite{Krogh1994}. The
+decoder described in Section~\ref{system_overview} is structurally of the
+latter kind: a pulse the receiver never detects still advances the byte
+framing, but produces nothing for the model to condition on.
+
+That property is what makes the approach applicable here. The failure mode
+measured on this link is not symbol confusion but symbol \emph{omission}: the
+receiver fails to detect a pulse, so no observation is produced for it. A
+per-symbol classifier has no mechanism to recover such a symbol, whereas a
+sequence model can represent it as an unobserved state transition and infer it
+from timing evidence and structural constraints.
+
+\subsection{Deletion Channels and Synchronization Errors}
+
+A channel that drops symbols without announcing it is, in coding-theoretic
+terms, a \emph{deletion} channel, and codes for channels with insertion and
+deletion errors have been studied since Levenshtein~\cite{Levenshtein1966};
+Mercier et al.~\cite{Mercier2010} survey the field. The closest prior work to
+the decoder used here is Davey and MacKay's watermark
+code~\cite{Davey2001}, which embeds a known pseudorandom sequence in the
+transmitted stream and recovers synchronization with an inner hidden Markov
+decoder whose state space contains explicit insertion and deletion transitions.
+The mechanism this paper uses is therefore not new. A hidden Markov model with
+deletion transitions, decoded by dynamic programming, is the established tool
+for this channel, and the present decoder should be understood as an instance
+of it rather than as a new construction.
+
+Two things differ, and both follow from the physical layer rather than from the
+algorithm. First, that literature generally assumes the transmitter can be
+designed: watermark and marker codes work by inserting redundancy for the
+receiver to synchronize against. Here the transmitter is fixed and nothing is
+added. The structure the decoder exploits, byte framing and a restricted
+payload alphabet, is pre-existing protocol overhead rather than deliberately
+inserted synchronization information, which is what makes the approach
+available as a retrofit to a deployed or mass-constrained system where the
+transmitter cannot be changed.
+
+Second, and more consequentially, a deletion in the classical model is
+invisible. The receiver observes a shorter sequence with no indication of where
+the loss occurred, and supplying that missing information is precisely why a
+watermark is inserted. In a pulse-width format the deletion is not invisible:
+it lengthens the following inter-pulse interval by a known, symbol-dependent
+amount, so the analog timing of the physical layer supplies for free the
+synchronization evidence a watermark exists to provide. A symbol-level deletion
+channel model discards exactly the quantity that makes recovery possible here.
+
+The contribution of this work is accordingly empirical rather than theoretical.
+It reports a measurement, on hardware, that the timing side-information carried
+by a pulse-width physical layer is present in every single-omission
+transmission observed and is sufficient to localize and identify the lost
+symbol without added redundancy, together with a quantification of how much of
+the resulting message loss a sequence decoder actually recovers. Sequence
+detection is already well established in space communication in the form of
+convolutional coding with Viterbi decoding; what is measured here is what the
+same machinery buys when no redundancy is available to decode.
+
+\subsection{Optical Localization}
+
+Received optical signal strength has been investigated as a position observable
+where emitter positions are known \textit{a priori}. Do and Yoo~\cite{DoYoo2016}
+survey visible-light positioning based on signal strength, angle of arrival, and
+time difference of arrival, and Lim~\cite{Lim2015} demonstrates
+three-dimensional LED-based positioning with sub-decimeter accuracy under
+line-of-sight conditions. Such techniques are attractive for surface operations
+because they would reuse an existing communication link as a navigation aid,
+avoiding dedicated sensing hardware in environments where GNSS is unavailable
+and visual odometry is degraded by low-contrast regolith and harsh shadowing.
+They are not evaluated in this paper: measurements reported in
+Section~\ref{results} show the receiver's amplitude response to be flat with
+distance over the range tested, which precludes signal-strength ranging on the
+present front end and is addressed as future work.

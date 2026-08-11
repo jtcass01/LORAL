@@ -1,0 +1,212 @@
+Four experiments were conducted: a single-rate characterization of the
+front end and its error modes, a characterization of the link across data
+rates, an offline evaluation of the decoder against held-out transmissions, and
+a live closed-loop demonstration on hardware. All measurements were taken with
+the beacon and receiver in a fixed line-of-sight geometry at approximately
+0.1~m, under ordinary indoor lighting. No result reported here varies the
+range, and none should be read as characterizing the link's behaviour with
+distance.
+
+\subsection{Automated Data Collection}
+
+Labeled data were collected by driving the beacon over its network interface and
+capturing the receiver's pulse stream. Because the transmitted message is set
+programmatically, the ground-truth symbol sequence is known exactly: no
+alignment heuristic is required, and there is consequently no risk of deriving
+labels from the same duration feature the model is later trained on.
+
+The beacon re-reads its message at the start of each transmission, so a change
+takes effect only at a message boundary; the transmission in flight when the
+message changes is therefore discarded. Transmissions are separated in the
+captured stream by the 500~ms inter-message rest rather than by decoding them,
+keeping segmentation independent of the process under evaluation. Captures whose
+length departs substantially from the expected symbol count are rejected as
+partial or straddling a message change.
+
+Payloads are drawn from three families. In the forty-message set used for the
+rate sweep, twenty-two messages are natural English prose sliced from a fixed
+corpus on word boundaries; ten are random printable ASCII drawn over letters,
+digits, punctuation and space; and eight are hand-constructed edge cases
+chosen to exercise framing, including
+runs of a single repeated character, alternating bit patterns, and bytes whose
+set bits sit at the ends of the least-significant-bit-first sequence. The three
+families are interleaved in transmission order so that payload type cannot
+become confounded with time. Retaining both prose and random payloads is
+deliberate: comparing them is what would separate a future language prior's
+contribution from what the structural constraints already provide.
+
+\subsection{Front-End and Error-Mode Characterization}
+
+A single-rate dataset was collected at 28.6~bit/s to characterize the front end
+and the baseline decoder's error modes with enough symbols to resolve rare
+events: 437 transmissions comprising 67{,}581 symbols, of which 283 carried
+natural text. Every symbol in this dataset was detected, which is what makes it
+usable for measuring misclassification in isolation from symbol loss. Per-pulse
+peak amplitude and peak filter response were recorded alongside duration.
+
+\subsection{Data-Rate Sweep}
+
+The link was characterized at five rate multipliers: 1$\times$, 2$\times$,
+3$\times$, 4$\times$ and 6$\times$, corresponding to 28.6, 57.1, 85.7, 114.3
+and 171.4~bit/s. Forty distinct messages were transmitted at each rate, three
+captures retained per message, giving 597 labeled transmissions comprising
+approximately 91{,}000 pulses. The same forty messages were used at every rate
+so that differences are attributable to rate rather than payload. One capture
+was discarded by the analysis for carrying a serial line truncated mid-value.
+
+Before each block the receiver's adaptive threshold is allowed to reconverge,
+and the serial buffer is flushed, so that captures made while the detector is
+still adapting do not enter the dataset.
+
+Unless stated otherwise, every figure and table below is computed from this
+sweep. Where a quantity is available from more than one collection, the sweep
+is the one reported, so that no two numbers in a single comparison come from
+different runs.
+
+\subsection{Offline Decoder Evaluation}
+
+The decoder was evaluated against the threshold decoder implemented in the
+receiver firmware. Two aspects of the protocol make this comparison meaningful
+rather than rigged.
+
+First, the baseline's acceptance windows are \emph{scaled with the rate}.
+Leaving them at their nominal settings would cause the baseline to fail
+completely above 1$\times$, which would be an artifact of the comparison rather
+than a result. The question posed is whether a fitted model outperforms
+hand-tuned thresholds that were themselves retuned for each operating point.
+
+Second, train and test are split \emph{by message}, never by capture. The three
+captures of a given message share a payload, so splitting at the capture level
+would place the same content on both sides of the split. Thirty percent of
+messages at each rate were held out, giving 36 test transmissions per rate and
+35 at 171.4~bit/s. The eight parameters of Table~\ref{tab:params} were fitted
+on the remaining 28 messages, independently at each rate.
+
+The split is deterministic rather than random: messages are sorted and the
+first twelve held out. This has a consequence that must be stated, because it
+bears on how the offline numbers should be read. Sorting by character code
+places punctuation, digits and uppercase ahead of lowercase prose, so the
+held-out set contains \emph{no} natural-text messages at all. All twelve are
+random or hand-constructed payloads, while 22 of the 28 training messages are
+English. Two things follow. The comparison between payload families motivated
+above cannot be performed on this split, and is left to future work. And the
+offline results are measured on payloads with no linguistic structure and a
+deliberate concentration of framing edge cases, which if anything understates
+the decoder relative to the traffic a deployed link would carry. Held-out
+messages also run longer than average, 174 symbols against 153 across the
+sweep, which matters in Section~\ref{results}.
+
+\subsubsection{Metrics}
+
+Two metrics are reported, and both are defined over \emph{received
+transmissions} rather than over distinct payloads: one transmission is one
+complete emission of a message, so a message sent three times contributes three
+independent trials. Naming the unit this way is deliberate. The term
+\emph{packet} would be misleading, because the link carries nothing of the kind
+in the networking sense, having no header, no length field and no checksum;
+and \emph{message} alone would be ambiguous, because the same forty messages
+are transmitted repeatedly and at every rate. The unit of delivery is one
+newline-terminated message, and the unit of measurement is one received
+transmission of it.
+
+Let transmission $i$ carry the byte sequence
+$\mathbf{b}^{(i)}=(b_1,\dots,b_{L_i})$, comprising its payload characters and
+the newline the beacon appends as terminator, and let $\hat{\mathbf{b}}^{(i)}$
+be what the decoder returns for it. Over $N$ evaluated transmissions, the
+transmission success rate is
+\begin{equation}
+\mathrm{TSR} = \frac{1}{N}\sum_{i=1}^{N}
+  \mathbf{1}\!\left[\hat{\mathbf{b}}^{(i)} = \mathbf{b}^{(i)}\right],
+\label{eq:tsr}
+\end{equation}
+where $\mathbf{1}[\cdot]$ is the indicator function and equality is of the
+entire sequence. A single substituted, inserted or dropped byte fails the whole
+transmission. This is the quantity that matters to a link without
+retransmission, and it is deliberately unforgiving: no partial credit is given
+for a message that arrives nearly intact.
+
+Character error rate measures how badly a failed transmission failed:
+\begin{equation}
+\mathrm{CER} = \frac{\sum_{i=1}^{N}
+  d_{\mathrm{L}}\!\left(\hat{\mathbf{b}}^{(i)},\,\mathbf{b}^{(i)}\right)}
+  {\sum_{i=1}^{N} L_i},
+\label{eq:cer}
+\end{equation}
+where $d_{\mathrm{L}}$ is the Levenshtein distance. Three properties of
+\eqref{eq:cer} are worth stating because they affect how the numbers should be
+read. Levenshtein rather than Hamming distance is used because a decoder may
+return a sequence of a different length from the one transmitted, so insertions
+and deletions must be counted and not only substitutions. The ratio is a
+micro-average, formed from the aggregate edit distance over the aggregate
+transmitted length, so longer transmissions carry proportionally more weight
+than shorter ones. And a decode that fails outright, returning no admissible
+path, contributes $d_{\mathrm{L}} = L_i$ and is charged as total loss rather
+than being excluded.
+
+The term \emph{character} error rate is used in preference to \emph{byte} error
+rate to avoid collision with the conventional meaning of BER as bit error rate;
+since payloads are ASCII, one character is one byte throughout. The metric is
+identical in the offline and live evaluations.
+
+A reference level for achievable performance is also computed. A transmission
+counts toward it if it was captured complete, or if it is missing exactly one
+symbol and the capture carries the signature that symbol would leave: an
+anomalous inter-pulse gap, or a merged pulse where a falling edge was missed. A
+transmission missing exactly one symbol that left no such signature is
+unrecoverable by any decoder operating on the detected pulse stream.
+
+Two qualifications keep this from being a strict upper bound, and both make it
+conservative. The signature test is applied only to the exactly-one-missing
+class, so transmissions missing two or more symbols are counted as lost
+outright even though some may carry enough timing evidence to be recovered;
+on the held-out sets those number between 0 and 6 transmissions per rate.
+Insertions are likewise not credited. The level is therefore best read as what
+this decoder's mechanism can be expected to reach rather than as an
+information-theoretic limit, and a decoder exceeding it would not be a
+contradiction. It
+is evaluated on the held-out transmissions only, the same population the
+decoders are scored on, so that the three quantities plotted together in
+Section~\ref{results} describe the same set of messages.
+
+\subsection{Live Closed-Loop Operation}
+
+In the live configuration the receiver streams pulses continuously, a decoder
+process decodes each transmission as it completes and returns the decoded
+message over the same serial link, and the receiver maintains a log of received
+messages. Ground truth is polled from the beacon so that each decoded
+transmission is scored against the message current at the time it was decoded.
+
+Live runs were conducted at 28.6~bit/s and 114.3~bit/s, yielding 39 and 118
+transmissions respectively. The decoder model was fitted from the sweep dataset
+at the corresponding rate and was not refitted during the run; the live traffic
+is therefore unseen data.
+
+\subsection{Instrumentation Validation}
+
+An artifact discovered during development is reported because it materially
+affected an earlier measurement and illustrates a hazard of instrumenting an
+embedded receiver.
+
+In the original implementation the receiver wrote one line to its serial port
+per detected pulse. The sampling loop halts for the duration of a write, and
+the inter-symbol gap shrinks in proportion to the rate, so this dead time
+consumes an increasing share of the interval available to detect the next
+pulse. Taking a write to cost on the order of 1~ms, which is roughly four
+iterations of the measured 262.4~$\mu$s detection loop but was not itself
+measured, the dead time would occupy 10\% of the gap at 1$\times$ and 60\% at
+6$\times$. Measured symbol loss under that implementation rose over the same
+span from 0.21\% to 0.88\%, which is the signature of a fixed per-pulse dead
+time rather than a degrading optical channel.
+
+Buffering the pulse records and emitting them during the inter-message rest
+reduced measured loss at every rate, though not uniformly: from 0.21\% to zero
+at 1$\times$, 0.37\% to 0.32\% at 2$\times$, 0.59\% to 0.44\% at 3$\times$,
+0.76\% to 0.37\% at 4$\times$, and 0.88\% to 0.52\% at 6$\times$. As a ratio
+that is a factor of 1.15, 1.35, 2.04 and 1.71 at 2$\times$ through 6$\times$,
+with loss eliminated outright at 1$\times$. The improvement is largest where
+the dead time occupies the largest share of the inter-symbol gap, but it
+reaches a full factor of two only at 4$\times$. All results in
+Section~\ref{results} use the buffered implementation. The comparison is
+reported because the earlier measurements were initially interpreted as channel
+degradation, and the distinction was resolvable only by changing the
+instrumentation and repeating the experiment.

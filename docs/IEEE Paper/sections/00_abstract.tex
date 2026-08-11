@@ -1,3 +1,29 @@
-This paper presents LORAL (Lunar Optical Relay And Localization), an embedded infrared (IR) beacon platform that jointly supports optical communication and position estimation using an array of photodiode receivers. Three frequency-separated IR beacons transmit on-off keyed (OOK) signals, enabling frequency-domain channel separation and concurrent packet decoding and signal-strength estimation. A Goertzel-based spectral pipeline is implemented on constrained hardware to extract per-beacon amplitude and identify carrier components for localization.
+Short-range infrared links are attractive where radio-frequency operation is
+constrained, but simple embedded receivers typically decode them with
+hand-tuned amplitude or timing thresholds that discard a symbol, and with it an
+entire byte, whenever a pulse falls outside its acceptance window. This paper
+presents LORAD, an experimental optical proximity link, and shows that
+replacing threshold decoding with maximum-likelihood sequence detection
+substantially improves link reliability without any change to the transmitter,
+the receiver electronics, or the modulation.
 
-The system is evaluated over a 0.1--3~m indoor line-of-sight link. Experimental results characterize bit error rate (BER) and packet success rate under varying distance conditions, and demonstrate multi-beacon trilateration achieving sub-10~cm position error in a 3~m~$\times$~3~m workspace. The results show that joint communication and localization can be supported using lightweight spectral processing on embedded platforms without separate sensing modalities.
+The link uses baseband on-off keying in which symbol identity is carried by
+pulse width rather than amplitude, a choice validated by measurement: with the
+receiver's transimpedance stage saturated, peak amplitude held to within 0.17\%
+across every pulse recorded while pulse-width classes remained separated by
+12--40 pooled standard deviations. A dual-photodiode
+receiver streams per-pulse observations to a decoder that combines a learned
+emission model, inter-pulse gap timing, and the protocol's own byte-framing and
+printable-ASCII constraints in a hidden Markov model decoded by the Viterbi
+algorithm.
+
+The system is characterized over five data rates from 28.6 to 171.4~bit/s using
+597 labeled transmissions, with a further 157 transmissions decoded in a live
+closed loop on hardware. Held out by message, the sequence decoder raises the
+transmission success rate from 72.2\% to 100\% at 28.6~bit/s and from 36.1\% to 69.4\% at
+114.3~bit/s. In live operation at 114.3~bit/s it raises transmission success from
+5.9\% to 44.9\% and halves character error rate, recovering 41\% of the
+transmissions the threshold decoder lost. Analysis shows the dominant failure
+mode is undetected pulses rather than misclassified ones, which per-symbol
+classifiers cannot address by construction, and that every such loss leaves a
+recoverable signature in the inter-pulse gap.

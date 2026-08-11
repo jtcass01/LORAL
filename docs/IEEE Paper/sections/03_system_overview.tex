@@ -1,0 +1,355 @@
+LORAD comprises a fixed infrared beacon, a dual-photodiode receiver, and a
+decoder. This section describes the hardware, the link protocol, the receiver
+front end and detection logic, and the sequence model used for decoding.
+
+\subsection{Hardware}\label{sec:hardware}
+
+Both endpoints are Raspberry Pi Pico 2~W boards (RP2350) running MicroPython.
+They are physically separate and share no timebase or synchronization channel,
+so every timing relationship the decoder exploits is recovered from the optical
+signal alone.
+
+The beacon drives a TSAL6200 infrared emitter through a 2N2222 common-emitter
+switch from GPIO~16. A second core runs an HTTP server
+that sets the broadcast message and the rate multiplier at runtime; the
+transmit loop reads both once per message and is otherwise independent of
+network activity. Start pulses nominally 50~ms wide were \emph{received} with a
+mean width of 50.18~ms and a standard deviation of 0.44~ms. That figure bounds
+transmit jitter rather than measuring it, since it also contains detection
+jitter and the receiver's timing quantization, but at 0.9\% of the symbol width
+it establishes that the concurrent server does not perturb transmit timing
+enough to matter.
+
+The receiver carries two BPW34 photodiodes, each feeding an MCP6002
+transimpedance stage with 100~k$\Omega$ feedback on a single 3.3~V rail, read
+on ADC0 and ADC1 (GPIO~26 and GPIO~27). The feedback resistor was corrected
+from 1~M$\Omega$ to 100~k$\Omega$ during development; all data reported here
+were collected after that change, with the two channels matched to a gain ratio
+of 1.15. The detectors are mounted close to coaxial rather than angled apart,
+which is why the normalized difference between them carries no usable bearing
+information at present (Section~\ref{conclusion}).
+
+Two properties of the converter matter for interpreting the amplitude figures
+in Section~\ref{results}. The RP2350 samples with a 12-bit successive
+approximation converter, which MicroPython's \texttt{read\_u16} reports on a
+16-bit scale; counts quoted out of 65{,}535 therefore carry 12 bits of real
+resolution. The converter is also multiplexed across both inputs, so charge
+from the previously selected channel biases each reading; the first conversion
+after each switch is discarded, at the cost of doubling the conversions per
+sample.
+
+Detection runs as a MicroPython polling loop, and that loop's period sets the
+receiver's timing resolution. Fitting the periodicity of the 90{,}870 measured
+pulse widths gives a loop period of 262.4~$\mu$s, or 3.81~kiloiterations per
+second, recovered independently at each of the five data rates and consistent
+across them to within 0.5\%. This single number bounds the link. Symbol widths
+are quantized at roughly a quarter of a millisecond, and the shortest symbol
+spans 38 loop iterations at 1$\times$ but only 6.4 at 6$\times$ and 4.8 at
+8$\times$, which is the mechanism behind the symbol loss reported in
+Section~\ref{results} and the reason the useful rate range ends where it does.
+
+\subsection{Link Protocol}
+
+The beacon transmits baseband on-off keying. Information is carried in the
+\emph{duration} of each emitted pulse rather than in its amplitude or in a
+modulated carrier. Three pulse widths form the symbol alphabet: 10~ms denotes a
+logical zero, 25~ms a logical one, and 50~ms a frame-start marker. Every pulse
+is followed by a fixed 10~ms idle period.
+
+Fig.~\ref{fig:protocol} shows one transmitted byte. Framing operates at byte
+granularity: each character is sent as a start pulse followed by its eight data
+bits, least-significant-bit first, giving nine pulses per byte. A message
+terminates with a newline, after which the transmitter idles for 500~ms and
+repeats, so a receiver may join the stream at any point and synchronize on the
+next start pulse. That rest is fifty times the inter-symbol gap, making message
+boundaries unambiguous even when individual symbols are lost.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_protocol.pdf}
+\caption{One transmitted byte. Symbol identity is carried by pulse width, not
+amplitude. Each byte is preceded by a 50~ms start pulse and followed by eight
+data bits, least-significant-bit first; a 10~ms gap follows every pulse.}
+\label{fig:protocol}
+\end{figure}
+
+At nominal timing a byte occupies approximately 280~ms, of which 60~ms is
+framing overhead, giving a throughput of 28.6~bit/s. Two properties follow.
+First, the per-byte start pulse and the gap that follows it consume 21\% of
+airtime. Second, because the zero and one symbols differ in duration,
+throughput is payload-dependent: an all-zero byte transmits in 220~ms against
+340~ms for all-ones, a 55\% spread. This dependence is revisited in
+Section~\ref{results}, where it accounts for a substantial part of the
+difference between two experiments.
+
+To characterize the link across operating points, all four timing constants are
+divided by a common rate multiplier, preserving their ratios while compressing
+the symbol set in time. The multiplier is set at runtime and applied at message
+boundaries so that no transmission is split across two configurations. The
+firmware clamps the multiplier to the range 0.5$\times$ to 8$\times$, nominally
+14.3 to 228.6~bit/s, but only 1$\times$ through 6$\times$ were characterized.
+The upper clamp is not a validated operating point: at 8$\times$ a zero symbol
+spans 4.8 iterations of the 262.4~$\mu$s detection loop, which is too few to
+time reliably.
+
+\subsection{Receiver}
+
+On the front end of Section~\ref{sec:hardware}, rather than thresholding
+absolute signal level, which the DC bias of the photodiode network dominates,
+the receiver applies a first-difference high-pass filter with leaky
+integration,
+\begin{equation}
+y[n] = \bigl(x[n] - x[n-1]\bigr) + \alpha\, y[n-1], \qquad \alpha = 0.85,
+\end{equation}
+independently per channel, so that detection responds to signal transitions
+rather than to absolute intensity. A rising edge is declared when the summed
+filter output across both channels exceeds a threshold and a falling edge when
+it falls below its negation; the interval between them is the symbol duration.
+
+Edges are declared on the \emph{sum} of both channels rather than on either
+individually. Off-axis, the further detector may barely register, and a
+per-channel trigger would discard exactly those geometries.
+
+The detection threshold adapts at runtime, tracking half the strongest recently
+observed edge under an exponential moving average, clamped to a fixed range and
+with a timeout that relaxes it by 10\% per second if no edge is detected. No
+per-range tuning is required.
+
+Serial output is buffered into preallocated arrays and emitted only during the
+inter-message rest. An earlier implementation wrote each pulse as it was
+detected, and because the sampling loop halts for the duration of a write, this
+cost measurable symbols at higher rates, an effect quantified in
+Section~\ref{experiments}. Reads of the reverse channel are confined to the
+same idle window for the same reason.
+
+\subsection{Decoder}
+
+The decoder treats symbol recovery as sequence estimation. Hidden states are
+positions within the byte framing; observations are detected pulses.
+Fig.~\ref{fig:model} shows both halves of the model: the framing chain, which
+is fixed by the protocol, and the three terms scored at each observation, of
+which two carry fitted parameters.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_model.pdf}
+\caption{The decoder. (a)~The framing state machine, fixed by the protocol and
+not learned. (b)~The same model unrolled into a trellis. Columns are detected
+pulses, rows are framing positions, grey edges are the legal advances, and the
+bold path is the one Viterbi retains. An ordinary pulse advances one framing
+position; the orange step at $o_3$ advances two on a single pulse, which is how
+a symbol the receiver never detected appears. Only $\mu_s$, $\sigma_s^2$,
+$\sigma_g$ and $\log\pi$ are fitted from data.}
+\label{fig:model}
+\end{figure*}
+
+The model is a hidden Markov model and the recursion below is the ordinary
+Viterbi algorithm, but three departures from the textbook formulation
+$\lambda=(A,B,\pi_0)$ are worth naming, because each one simplifies or
+complicates the standard picture in a way that matters here.
+
+First, the transition structure $A$ is not a learned stochastic matrix. It is a
+deterministic legality constraint read directly off the protocol: a transition
+either exists or it does not, and Fig.~\ref{fig:model}(a) is the whole of it.
+Nothing about the framing is estimated. Second, because the transmitted message
+is known exactly, parameter fitting is fully supervised and closed-form. No
+expectation-maximization over unlabeled sequences is required, so there are no
+local optima and no convergence criterion; the estimator is the sample mean and
+variance of a labeled set. Third, and most consequentially, a standard HMM
+emits exactly one observation per transition. Here a single observation may
+advance the chain by as many as $K+1$ transitions, because symbols the receiver
+failed to detect still advance the framing even though they produced no pulse.
+The closest standard analogues are a profile HMM with delete
+states~\cite{Krogh1994} and the inner decoder of a watermark
+code~\cite{Davey2001}, and it is this departure that Fig.~\ref{fig:model}(b) is
+drawn to make visible: a skipped symbol is the one step in the trellis that
+descends two rows in a single column.
+
+Viterbi rather than the forward recursion is used because the required output
+is a single self-consistent byte sequence, not a per-symbol posterior. A
+marginal confidence at each position would not be constrained to spell an
+admissible message.
+
+\subsubsection{States and observations}
+
+A state is the pair $q=(\text{bit position},\ \text{partial byte value})$,
+giving $|Q| = 1 + \sum_{k=1}^{8} 2^{\,k-1} = 256$ states. Carrying the partial
+byte in the state allows the payload constraint to prune during search: a path
+that would complete an inadmissible byte is eliminated at the eighth data bit
+rather than producing a candidate that must be rejected afterwards. The
+admissible set is printable ASCII, 0x20 through 0x7E, together with the newline
+the beacon appends as its terminator, which must remain admissible for the
+final byte of a message to close.
+
+The $t$-th detected pulse contributes the observation $o_t = (d_t,\ g_t)$,
+where $d_t$ is its measured width and $g_t$ the interval since the previous
+falling edge. Write $r$ for the rate multiplier, $w(s)$ for the nominal width
+of symbol $s$ at $1\times$, and $G$ for the nominal inter-symbol gap.
+
+\subsubsection{The three terms}
+
+Each observation advances the chain by one emitting transition, optionally
+preceded by up to $K=3$ \emph{skips} $u = (u_1,\dots,u_k)$ representing symbols
+the receiver failed to detect. Three sources of evidence are combined in log
+space.
+
+The \emph{emission} term is a Gaussian class-conditional density over pulse
+width,
+\begin{equation}
+\log p(d_t \mid s) = -\tfrac{1}{2}\left[\log\!\left(2\pi\sigma_s^2\right)
+  + \frac{\left(d_t - \mu_s\right)^2}{\sigma_s^2}\right],
+\label{eq:emission}
+\end{equation}
+with $\mu_s$ and $\sigma_s^2$ fitted per symbol and per rate. A generative form
+is used because the Viterbi recursion requires $p(o \mid s)$ directly, rather
+than a posterior that would have to be divided back through the class priors.
+
+The \emph{gap} term evaluates the observed interval against the interval the
+hypothesized skips predict. That prediction is structural, taken from nominal
+protocol timing rather than fitted,
+\begin{equation}
+\hat{g}(k, u) = (k+1)\,\frac{G}{r} + \sum_{j=1}^{k} \frac{w(u_j)}{r},
+\label{eq:gaphat}
+\end{equation}
+and only its spread is learned:
+\begin{equation}
+\log p(g_t \mid k, u) = \log \mathcal{N}\!\left(g_t;\ \hat{g}(k,u),\
+  \bigl((1+k)\,\sigma_g\bigr)^2\right).
+\label{eq:gap}
+\end{equation}
+The variance grows with $k$ because a hypothesis that stacks several
+unobserved symbols accumulates their timing spread. Equation~\eqref{eq:gaphat}
+is what makes a skipped symbol identifiable rather than merely permitted: its
+value depends on \emph{which} symbols are hypothesized missing, not only how
+many.
+
+The \emph{skip prior} charges a fitted log-probability $\log\pi$ per unobserved
+symbol. Without a real cost here the decoder could posit arbitrarily many
+phantom symbols to force any byte into the admissible range.
+
+\subsubsection{Recursion}
+
+Let $\delta_t(q)$ be the best log-score of any path ending in state $q$ having
+consumed $t$ observations, with $\delta_0$ zero at the start state and
+$-\infty$ elsewhere. Then
+\begin{equation}
+\begin{split}
+\delta_t(q') = \max_{q,\,u,\,s}\Bigl[\,&\delta_{t-1}(q) + k\log\pi \\
+  &+ \gamma_t \log p(g_t \mid k,u) + \log p(d_t \mid s)\Bigr],
+\end{split}
+\label{eq:viterbi}
+\end{equation}
+maximized over source states $q$, skip sequences $u$ of length $k \le K$ that
+walk $q$ to some intermediate state $m$ along legal transitions, and symbols
+$s$ whose transition carries $m$ to $q'$. The gate $\gamma_t \in \{0,1\}$
+suppresses the gap term where it does not apply: at $t=1$, because the first
+pulse of a transmission is preceded by the 500~ms inter-message rest rather
+than an inter-symbol gap, and wherever $g_t$ exceeds $1.5\,\hat{g}(K, \text{all
+START})$, the largest interval the skip model could legitimately explain.
+Decoding is the usual Viterbi backtrace from $\arg\max_q \delta_T(q)$, with
+beam pruning that discards paths trailing the leader by more than a fixed
+margin.
+
+Fig.~\ref{fig:recovery} illustrates the mechanism
+Equation~\eqref{eq:gaphat} encodes: an undetected symbol lengthens the
+following gap by its own width plus one inter-symbol gap, so the observed gap
+indicates both that a symbol was lost and which one.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_recovery.pdf}
+\caption{Why an undetected symbol is recoverable. When the receiver misses a
+pulse, the following inter-pulse gap is lengthened by that pulse's width plus
+one gap period, so its duration identifies the lost symbol.}
+\label{fig:recovery}
+\end{figure}
+
+\subsubsection{What is fitted, and how}
+
+Eight scalars are learned per rate: three emission means, three emission
+variances, one gap spread, and one skip prior. Everything else, the transition
+structure, the nominal widths $w(\cdot)$ and $G$ entering
+\eqref{eq:gaphat}, the skip bound $K$, and the beam width, is fixed by the
+protocol or chosen once and held. Table~\ref{tab:params} lists the fitted
+values.
+
+Emission parameters are maximum-likelihood estimates over training pulses
+labeled $s$,
+\begin{equation}
+\begin{split}
+\mu_s &= \frac{1}{N_s}\sum_{i \in I_s} d_i, \\
+\sigma_s^2 &= \max\!\left(\frac{1}{N_s}\sum_{i \in I_s} (d_i - \mu_s)^2,\
+  (0.02\,\mu_s)^2\right).
+\end{split}
+\label{eq:fitem}
+\end{equation}
+The index set $I_s$ is drawn only from training transmissions in which
+\emph{every} symbol was detected. That restriction is what makes the labels
+exact: when the captured pulse count equals the transmitted symbol count, the
+$i$-th pulse is the $i$-th symbol by position, so no alignment heuristic is
+involved and the emission model cannot inherit an alignment error. The variance
+floor prevents a class measured as near-deterministic from dominating every
+path; it binds in 4 of the 15 cells, marked in Table~\ref{tab:params}.
+
+The gap spread is the sample standard deviation of the departure of observed
+gaps from nominal, over the same fully captured transmissions, floored the same
+way:
+\begin{equation}
+\sigma_g = \max\!\left(\operatorname{sd}\bigl\{\,g_i - G/r\,\bigr\},\
+  0.02\,G/r\right).
+\label{eq:fitgap}
+\end{equation}
+
+The skip prior is the observed capture shortfall, Laplace-smoothed:
+\begin{equation}
+\log\pi = \log\frac{M + \tfrac{1}{2}}{E + 1},
+\label{eq:fitskip}
+\end{equation}
+where $E$ is the total number of symbols transmitted across the training
+transmissions and $M$ the number never detected. Smoothing is not cosmetic
+here. At 28.6~bit/s the receiver drops nothing at all, so the unsmoothed
+estimate is $\log 0$; the decoder must remain \emph{able} to posit a skip, just
+very reluctant to. The smoothed value at that rate, $\log\pi = -10.08$, is
+almost five nats more expensive than at 171.4~bit/s, which is the model
+correctly learning that an unexplained symbol is far less plausible on a link
+that is not dropping any.
+
+\begin{table}[t]
+\caption{Fitted parameters, per rate, from the training messages only. All
+quantities in ms except $\log\pi$. Entries marked $\dagger$ are set by the
+variance floor of \eqref{eq:fitem} rather than by the data.}
+\label{tab:params}
+\centering
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lccccr@{}}
+\toprule
+Rate & \multicolumn{3}{c}{$\mu_s$ ($\sigma_s$)} & $\sigma_g$ & $\log\pi$ \\
+\cmidrule(lr){2-4}
+(bit/s) & ZERO & ONE & START & & \\
+\midrule
+28.6  & 10.18 (0.39) & 25.17 (0.50)$^\dagger$ & 50.17 (1.00)$^\dagger$ & 0.38 & $-10.08$ \\
+57.1  & 5.17 (0.35)  & 12.65 (0.27)           & 25.15 (0.50)$^\dagger$ & 0.26 & $-5.80$ \\
+85.7  & 3.50 (0.30)  & 8.47 (0.34)            & 16.82 (0.34)$^\dagger$ & 0.29 & $-5.50$ \\
+114.3 & 2.66 (0.21)  & 6.38 (0.32)            & 12.63 (0.40)           & 0.32 & $-5.54$ \\
+171.4 & 1.84 (0.22)  & 4.31 (0.15)            & 8.47 (0.31)            & 0.25 & $-5.19$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:params} also answers a fair objection to the emission model:
+if the protocol already specifies every symbol width, why learn $\mu_s$ at all?
+Because the receiver does not measure the transmitted width. Every fitted mean
+exceeds its nominal value, and by a strikingly stable amount: across all
+fifteen rate-symbol combinations the excess is $155 \pm 16~\mu$s, independent of
+both the symbol and the rate. That is 0.59 of the 262.4~$\mu$s detection loop
+period, exactly the signature of a falling edge being registered on the first
+loop iteration after it occurs. A decoder using nominal widths would place
+every class centre roughly half a sample low; fitting absorbs the bias without
+having to model its cause.
+
+Because the decoder's lattice requires a backpointer per state per observation
+(tens of thousands of entries for one message), it does not fit within the
+receiver's memory, which raised allocation failures at 19~kB during development.
+The receiver therefore streams per-pulse observations over its existing USB
+serial connection and receives decoded messages back over the same link.

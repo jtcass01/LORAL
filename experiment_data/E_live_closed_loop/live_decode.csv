@@ -1,0 +1,40 @@
+elapsed_s,timestamp,ground_truth,decoded,baseline,decoder_exact,baseline_exact,decoder_char_errs,baseline_char_errs,chars,cum_decoder_exact_rate,cum_baseline_exact_rate,cum_decoder_char_err,cum_baseline_char_err,edge_threshold,device_dropped
+2.1,2026-08-08T17:43:53,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,1.0000,0.00000,0.00000,3176,0
+9.7,2026-08-08T17:44:00,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,1.0000,0.00000,0.00000,3220,0
+17.4,2026-08-08T17:44:08,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,1.0000,0.00000,0.00000,3168,0
+25.0,2026-08-08T17:44:16,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,1.0000,0.00000,0.00000,3307,0
+32.8,2026-08-08T17:44:23,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,1.0000,0.00000,0.00000,3176,0
+40.4,2026-08-08T17:44:31,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,1.0000,0.00000,0.00000,3367,0
+48.1,2026-08-08T17:44:39,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,1.0000,0.00000,0.00000,3308,0
+55.7,2026-08-08T17:44:46,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,1.0000,0.00000,0.00000,3405,0
+63.5,2026-08-08T17:44:54,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,1.0000,0.00000,0.00000,3289,0
+71.1,2026-08-08T17:45:02,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,1.0000,0.00000,0.00000,3254,0
+78.8,2026-08-08T17:45:09,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 2345,1,0,0,1,25,1.0000,0.9091,0.00000,0.00364,3038,0
+86.4,2026-08-08T17:45:17,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fo 12345,1,0,0,1,25,1.0000,0.8333,0.00000,0.00667,3271,0
+94.2,2026-08-08T17:45:25,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.8462,0.00000,0.00615,3253,0
+101.8,2026-08-08T17:45:32,The Quick Brown Fox 12345,The Quick Brown Fox 12345,he Quick Bown Fox 12345,1,0,0,2,25,1.0000,0.7857,0.00000,0.01143,3252,0
+109.5,2026-08-08T17:45:40,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The QuickBrown Fox 12345,1,0,0,1,25,1.0000,0.7333,0.00000,0.01333,3277,0
+117.1,2026-08-08T17:45:48,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.7500,0.00000,0.01250,3340,0
+124.8,2026-08-08T17:45:55,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.7647,0.00000,0.01176,3347,0
+132.5,2026-08-08T17:46:03,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.7778,0.00000,0.01111,3190,0
+140.2,2026-08-08T17:46:11,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.7895,0.00000,0.01053,3228,0
+147.8,2026-08-08T17:46:18,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.8000,0.00000,0.01000,3345,0
+155.6,2026-08-08T17:46:26,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.8095,0.00000,0.00952,3233,0
+163.2,2026-08-08T17:46:34,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.8182,0.00000,0.00909,3360,0
+171.0,2026-08-08T17:46:42,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.8261,0.00000,0.00870,3270,0
+178.5,2026-08-08T17:46:49,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.8333,0.00000,0.00833,3192,0
+186.3,2026-08-08T17:46:57,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quik Brown Fx 12345,1,0,0,2,25,1.0000,0.8000,0.00000,0.01120,3251,0
+193.9,2026-08-08T17:47:05,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 1345,1,0,0,1,25,1.0000,0.7692,0.00000,0.01231,3448,0
+201.6,2026-08-08T17:47:12,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The QuickBrown Fox 12345,1,0,0,1,25,1.0000,0.7407,0.00000,0.01333,3202,0
+209.2,2026-08-08T17:47:20,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.7500,0.00000,0.01286,3267,0
+217.0,2026-08-08T17:47:28,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 1245,1,0,0,1,25,1.0000,0.7241,0.00000,0.01379,3297,0
+224.6,2026-08-08T17:47:35,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.7333,0.00000,0.01333,3433,0
+232.4,2026-08-08T17:47:43,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.7419,0.00000,0.01290,3149,0
+239.9,2026-08-08T17:47:51,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.7500,0.00000,0.01250,3300,0
+247.6,2026-08-08T17:47:58,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 1245,1,0,0,1,25,1.0000,0.7273,0.00000,0.01333,3282,0
+255.3,2026-08-08T17:48:06,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Qick Brown ox 12345,1,0,0,2,25,1.0000,0.7059,0.00000,0.01529,3145,0
+263.2,2026-08-08T17:48:14,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The QuickBrown Fox 12345,1,0,0,1,25,1.0000,0.6857,0.00000,0.01600,3178,0
+270.7,2026-08-08T17:48:21,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.6944,0.00000,0.01556,3284,0
+278.3,2026-08-08T17:48:29,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.7027,0.00000,0.01514,3255,0
+286.0,2026-08-08T17:48:37,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The Quick Brown Fox 12345,1,1,0,0,25,1.0000,0.7105,0.00000,0.01474,3362,0
+293.7,2026-08-08T17:48:44,The Quick Brown Fox 12345,The Quick Brown Fox 12345,The uick Brown Fox 12345,1,0,0,1,25,1.0000,0.6923,0.00000,0.01538,3291,0

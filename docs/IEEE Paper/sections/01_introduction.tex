@@ -1,17 +1,104 @@
-Optical wireless links are attractive for space and near-surface applications because they provide highly directional, low-interference communication under radio-frequency constraints. At the same time, received optical power can serve as a position observable in controlled environments. What remains less explored is a single embedded platform that uses one optical signal for both communication and localization.
+Surface operations on the Moon will depend on short-range links between assets
+that are close together but separately powered: a rover and its lander, a
+sensor mast and a relay node, an instrument package and the vehicle that
+deployed it. These \emph{proximity} links carry housekeeping telemetry,
+commands, and instrument data over metres rather than kilometres, and they are
+not the same design problem as the high-rate optical trunk links that dominate
+the space optical communication literature.
 
-This paper presents LORAL, a compact experimental platform that investigates joint optical communication and localization using infrared (IR) beacons. LORAL employs three fixed IR beacons at distinct carrier frequencies, enabling frequency-domain beacon separation from a single photodiode receiver while supporting on-off keyed (OOK) packet decoding, signal-strength estimation, and embedded position estimation via the Goertzel algorithm.
-The primary contributions of this work are: (i)~a unified embedded architecture
-for joint optical communication and localization sharing a single signal acquisition
-and spectral estimation pipeline; (ii)~a characterization of bit error rate (BER)
-and packet success rate for IR OOK links across 0.1--3~m; and (iii)~a multi-beacon
-triangulation demonstration targeting position accuracy below 10~cm in a
-3~m~$\times$~3~m workspace.
+Optical signalling is attractive at this scale for reasons specific to the
+environment. It requires no spectrum allocation and generates no
+radio-frequency emissions that might couple into sensitive instrumentation. It
+is inherently directional, which limits mutual interference between co-located
+assets. Emitter and photodiode front ends are light and draw little power,
+which matters where every gram and every watt is contested. Permanently
+shadowed regions near the lunar poles, of particular interest for volatiles
+prospecting, additionally offer very low ambient infrared background, an
+operating condition that favours optical reception and is difficult to
+reproduce terrestrially.
 
-The remainder of this paper is organized as follows:
-Section~\ref{related_works} reviews prior work in free-space optical communication,
-optical localization, frequency-multiplexed beacon networks, and embedded spectral
-detection. Section~\ref{system_overview} describes the system architecture and
-signal model. Section~\ref{experiments} details the experimental setup.
-Section~\ref{results} presents results and evaluation, and
-Section~\ref{conclusion} concludes the paper.
+The constraint that shapes such a link is not aperture or transmit power but
+the receiver. A surface asset's communication processor is small,
+radiation-tolerant, and shared with other tasks, so decoding must be cheap
+enough to run inside a sampling loop. In practice this means threshold
+decoding: each detected pulse is assigned to a symbol by testing it against
+fixed acceptance windows. That approach has a failure mode which is rarely
+quantified. It has no representation for a pulse that was never detected at
+all, so when the receiver misses a symbol the byte containing it is lost, and
+because protocols of this kind spend several pulses per byte, a small
+per-symbol error rate compounds into a large message error rate. Improving the
+per-symbol classifier cannot help, because the missing observation was never
+presented to it.
+
+Message loss is more costly in this setting than the raw numbers suggest.
+Proximity links operate on constrained duty cycles and within scheduled
+communication windows, so a lost message is not simply retransmitted at
+negligible cost: retransmission consumes energy, occupies window time, and on a
+store-and-forward relay path can delay delivery by an entire orbit. Recovering
+a message at the receiver, using information already present in the captured
+signal, is therefore worth more than the same improvement would be on a
+terrestrial link with cheap retries.
+
+This paper presents LORAD (Lunar Optical Relay And Decoding), an experimental
+platform built to measure that effect and to address it. The link uses baseband
+on-off keying in which symbol identity is carried by pulse \emph{width} rather
+than amplitude. That choice is not incidental. Measurements presented in
+Section~\ref{results} show the receiver's transimpedance stage to be saturated,
+pinning received peak amplitude to within 0.17\% across every pulse recorded,
+so an amplitude-discriminating scheme could not function on this hardware,
+whereas pulse-width classes remain separated by 12--40 pooled standard
+deviations even at rates where decoding fails outright. Time-domain
+encoding is also the more defensible choice for a dusty, thermally cycling
+surface environment, where optical throughput and detector responsivity drift
+but symbol timing does not.
+
+The receiver streams per-pulse observations to a decoder that treats decoding
+as sequence estimation rather than classification. A hidden Markov model
+encodes the protocol's byte framing directly in its state, so that transitions
+producing an inadmissible byte are pruned during search rather than filtered
+afterwards. Skip transitions represent undetected symbols, and inter-pulse gap
+timing supplies the evidence that makes them identifiable: a symbol that goes
+undetected lengthens the following gap by its own width plus one inter-symbol
+gap, indicating both \emph{that} a symbol was lost and \emph{which} one. No
+change to the transmitter, the receiver electronics, or the modulation is
+required: the improvement is obtained entirely from information the existing
+receiver already captures and discards.
+
+The contributions of this work are:
+
+\begin{itemize}
+\item A characterization of a pulse-width OOK optical proximity link across
+five data rates from 28.6 to 171.4~bit/s, establishing that its dominant
+failure mode is undetected pulses rather than misclassified ones, and that
+every such omission nonetheless leaves a recoverable signature in the
+inter-pulse timing. This yields a reference level for what a decoder operating
+on the detected pulse stream can be expected to recover.
+
+\item A maximum-likelihood sequence decoder combining a learned emission model,
+gap-timing evidence, and the protocol's framing and printable-ASCII
+constraints, which raises transmission success from 72.2\% to 100\% at 28.6~bit/s and
+from 36.1\% to 69.4\% at 114.3~bit/s on held-out data.
+
+\item A live closed-loop demonstration in which a memory-constrained receiver
+streams observations to the decoder and receives corrected messages back,
+raising transmission success from 5.9\% to 44.9\% at 114.3~bit/s over 118
+transmissions, an architecture directly analogous to a surface asset
+offloading decoding to a better-resourced relay or lander.
+
+\item An account of the measurement pitfalls encountered on a
+resource-constrained receiver: an instrumentation artifact that inflated
+apparent symbol loss by as much as a factor of two and was mistaken for channel
+degradation until isolated, and a payload-length dependence that accounted for
+most of an apparent discrepancy between two experiments. A by-product of the
+first is a method for recovering the receiver's detection-loop period, and with
+it a fixed edge-detection bias, from the periodicity of its own pulse-width
+measurements.
+\end{itemize}
+
+The remainder of this paper is organized as follows.
+Section~\ref{related_works} reviews prior work in space optical communication,
+proximity links, receiver diversity, and sequence detection.
+Section~\ref{system_overview} describes the link protocol, receiver hardware,
+and decoder model. Section~\ref{experiments} details the experimental method
+and datasets. Section~\ref{results} presents the measurements, and
+Section~\ref{conclusion} concludes.

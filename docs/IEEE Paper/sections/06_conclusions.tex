@@ -1,0 +1,90 @@
+This paper presented LORAD, an experimental optical proximity link, and showed
+that replacing threshold decoding with maximum-likelihood sequence detection
+substantially improves reliability with no change to the transmitter, the
+receiver electronics, or the modulation. For a mass- and power-constrained
+surface asset, that distinction is the point: the improvement is obtained
+entirely from information the existing receiver already captures and discards,
+and costs only computation that need not reside on the asset itself.
+
+The central measurement is that the link's dominant failure mode is symbol
+\emph{omission} rather than misclassification. Pulse-width classes remain
+separated by 12--40 pooled standard deviations at every rate tested, and at the
+lowest rate no substitution errors occurred across 67{,}581 symbols. What limits
+the link is symbols the receiver never detects: at 114.3~bit/s, 52.5\% of
+transmissions were missing at least one, and because a byte spans nine pulses, a
+per-symbol loss of 0.371\% compounds into majority message failure on a
+25-character message. This has a direct architectural consequence: a better
+per-symbol classifier cannot help, because the missing observation was never
+produced. It is not visible from aggregate error rates alone.
+
+Every undetected symbol nonetheless leaves a signature in the inter-pulse gap,
+present in 100\% of the single-omission transmissions examined. A sequence
+decoder combining a learned emission model, gap-timing evidence, and the
+protocol's framing and printable-ASCII constraints exploits that signature. It
+raises transmission success from 72.2\% to 100\% at 28.6~bit/s and from 36.1\% to
+69.4\% at 114.3~bit/s on held-out data, and in live closed-loop operation from
+5.9\% to 44.9\% at 114.3~bit/s, recovering 41\% of the transmissions the
+threshold decoder lost.
+
+Framed in mission terms, roughly two in five transmissions that would have
+required retransmission are instead recovered at first reception. On a
+proximity link operating within scheduled communication windows and a
+constrained energy budget, avoided retransmissions translate directly into
+window time and energy returned to the mission, and on a store-and-forward
+relay path they avoid delivery latency that can extend to an entire orbit.
+
+Four limitations bound these results. First, the decoder recovers only 42\% to
+57\% of the available headroom above the lowest rate (69.4\% against a computed
+ceiling of 94.4\% at 114.3~bit/s), and its residual failures are almost
+entirely single-character substitutions arising where the payload constraint
+admits more than one completion. Second, sample sizes of approximately 36
+held-out transmissions per rate give confidence intervals of roughly $\pm$15
+percentage points; these separate the two decoders at four of the five rates but
+overlap at 171.4~bit/s, and they do not resolve the shape of the per-rate
+curves. Third, the held-out split contains no natural-language payloads, so the
+offline figures characterize the decoder on random and adversarially framed
+messages rather than on representative traffic, and the comparison between
+payload families that the dataset was built to support remains unmade. Fourth,
+and most consequentially for a flight application, the decoder does not fit in
+the receiver's memory and runs on a host computer over the receiver's serial
+link.
+
+That third limitation is less restrictive than it first appears. The
+demonstrated architecture, a constrained endpoint streaming observations to a
+better-resourced decoder and receiving corrected messages back, mirrors a
+plausible surface topology, in which a rover offloads decoding to a lander or
+relay node with greater processing and thermal margin. Where that topology is
+unavailable, a fixed-lag decoder committing decisions a bounded number of
+symbols behind the observation front would bound memory and permit on-device
+operation. The remaining substitution errors are exactly what a character-level
+prior over the payload addresses, and the dataset deliberately mixes natural
+text with random ASCII so that such a prior's contribution can be measured
+rather than assumed.
+
+Two findings are methodological rather than architectural, and are reported
+because both were initially misread as properties of the channel.
+Instrumentation dead time (one serial write per detected pulse) inflated
+apparent symbol loss by up to a factor of two and produced
+a rate-dependent degradation closely resembling channel behaviour; only
+buffering the output and repeating the experiment separated the two. Separately,
+because the zero and one symbols differ in duration, throughput and failure
+probability both depend on the payload, and a difference in message length
+between two experiments accounted for most of an apparent discrepancy in their
+results. Both hazards are inherent to instrumenting a resource-constrained
+receiver, and both would be harder to diagnose on a deployed system than on a
+bench.
+
+Finally, the platform's original localization objective remains open and remains
+motivated: a surface asset that could derive bearing from a link it already
+maintains would gain a navigation aid without additional hardware, in an
+environment where GNSS is unavailable. Nothing here advances it, and one
+measurement stands in the way: the transimpedance stage saturates, pinning peak
+amplitude to within 0.17\% across every pulse recorded, so the present front end
+yields no amplitude observable of any kind. The dual-photodiode receiver
+supports a normalized-difference bearing observable that would cancel range and
+gain, and the collection and analysis pipeline already accommodates angular
+labels; realizing it requires reducing the transimpedance gain so the amplifier
+stays linear, and angling the detectors apart, which are at present mounted
+close to coaxial. Whether amplitude varies usefully with range on a linear front
+end is untested: every measurement reported here was taken at a single fixed
+geometry.
