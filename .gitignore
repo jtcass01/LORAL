@@ -20,3 +20,6 @@ docs/IEEE Paper/*.fls
 docs/IEEE Paper/*.fdb_latexmk
 docs/IEEE Paper/*.synctex.gz
 docs/IEEE Paper/main.pdf
+
+# Windows
+*:Zone.Identifier
